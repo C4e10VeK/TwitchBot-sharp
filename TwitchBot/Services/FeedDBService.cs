@@ -31,10 +31,10 @@ public class FeedDbService
     public async Task<List<FeedSmile>> GetSmiles(User user) =>
         await _feedEmojis.Find(e => e.User == user.Name).ToListAsync();
     
-    public async Task<List<FeedSmile>> GetSmiles(string userName) =>
+    public async Task<List<FeedSmile>> GetSmiles(string? userName) =>
         await _feedEmojis.Find(e => e.User == userName).ToListAsync();
 
-    public async Task<List<string>> GetAvailableSmiles()
+    public async Task<List<string?>> GetAvailableSmiles()
     {
         var list = await _availableSmiles.Find(_ => true).ToListAsync();
         return list.Select(a => a.Name).ToList();
@@ -53,10 +53,18 @@ public class FeedDbService
         return await _users.CountDocumentsAsync(u => u.Name == name) is 0 ? null : await usersCursor.SingleAsync();
     }
 
-    public async Task<FeedSmile?> GetSmileAsync(User user, string name)
+    public async Task<FeedSmile?> GetSmileAsync(User user, string? name)
     {
         var emojiCursor = await _feedEmojis.FindAsync(e => e.User == user.Name && e.Name == name);
         return await _feedEmojis.CountDocumentsAsync(e => e.User == user.Name && e.Name == name) is 0
+            ? null
+            : await emojiCursor.SingleAsync();
+    }
+
+    public async Task<FeedSmile?> GetSmileAsync(ObjectId id)
+    {
+        var emojiCursor = await _feedEmojis.FindAsync(e => e.Id == id);
+        return await _feedEmojis.CountDocumentsAsync(e => e.Id == id) is 0
             ? null
             : await emojiCursor.SingleAsync();
     }
@@ -87,14 +95,22 @@ public class FeedDbService
         await _feedEmojis.InsertOneAsync(emoji);
     }
 
-    public async Task AddAvailableSmile(string name)
+    public async Task AddAvailableSmile(string? name)
     {
-        var availableEmoji = new AvailableSmile { Name = name };
+        var availableSmile = new AvailableSmile { Name = name };
         if ((await GetAvailableSmiles()).Contains(name)) return;
-        await _availableSmiles.InsertOneAsync(availableEmoji);
+        await _availableSmiles.InsertOneAsync(availableSmile);
+
+        foreach (var smile in await GetAvailableSmiles())
+        {
+            foreach (var user in (await GetUsersAsync()).Where(user => !user.FeedSmiles.ContainsKey(smile)))
+            {
+                await AddSmileAsync(user, smile);
+            }
+        }
     }
     
-    public async Task<FeedSmile?> AddSmileAsync(User user, string emojiName)
+    public async Task<FeedSmile?> AddSmileAsync(User user, string? emojiName)
     {
         var emoji = new FeedSmile
         {
@@ -109,7 +125,7 @@ public class FeedDbService
         emoji = await GetSmileAsync(user, emoji.Name);
         if (emoji is null) return emoji;
 
-        user.FeedEmojis.Add(emoji.Name, emoji.Id);
+        user.FeedSmiles.Add(emoji.Name, emoji.Id);
         await UpdateUserAsync(user.Id, user);
         return emoji;
     }
@@ -126,9 +142,8 @@ public class FeedDbService
         var emojis = await GetSmiles(user);
         if (emojis.Count != availableEmojis.Count)
         {
-            foreach (var availableEmoji in availableEmojis)
+            foreach (var availableEmoji in availableEmojis.Where(availableEmoji => !emojis.Any(e => e.Name == availableEmoji)))
             {
-                if (emojis.Any(e => e.Name == availableEmoji)) continue;
                 var emoji = await AddSmileAsync(user, availableEmoji) ?? throw new InvalidOperationException();
                 emojis.Add(emoji);
             }

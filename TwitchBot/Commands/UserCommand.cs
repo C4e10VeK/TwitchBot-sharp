@@ -40,8 +40,7 @@ public class UserUpdateCommand : ICommand
     private async Task Add(ITwitchClient client, ChatCommand command, ChatMessage message)
     {
         var sender = await _feedDbService.GetUserAsync(message.Username);
-        if (sender is null || sender.Permission > UserPermission.Moderator
-                           || message.IsModerator || message.IsBroadcaster)
+        if (sender is null || !message.IsModerator || sender.Permission > UserPermission.Moderator)
         {
             client.SendMention(message.Channel, message.DisplayName, "Требуются права модератора");
             return;
@@ -51,7 +50,6 @@ public class UserUpdateCommand : ICommand
         var userToAdd = command.ArgumentsAsList[1].ToLower();
         await _feedDbService.AddUser(userToAdd);
         client.SendMention(message.Channel, message.DisplayName, $"Пользователь {userToAdd} добавлен");
-        
     }
     
     private async Task SetPermission(ITwitchClient client, ChatCommand command, ChatMessage message)
@@ -59,7 +57,7 @@ public class UserUpdateCommand : ICommand
         if (command.ArgumentsAsList.Count < 3) return;
         if (!command.ArgumentsAsList.Any()) return;
         var sender = await _feedDbService.GetUserAsync(message.Username);
-        if (sender is null || sender.Permission > UserPermission.Owner || message.IsBroadcaster)
+        if (sender is null || sender.Permission > UserPermission.Owner)
         {
             client.SendMention(message.Channel, message.DisplayName, "Требуются права владельца");
             return;
@@ -93,8 +91,7 @@ public class UserUpdateCommand : ICommand
     {
         if (!command.ArgumentsAsList.Any()) return;
         var sender = await _feedDbService.GetUserAsync(message.Username);
-        if (sender is null || sender.Permission > UserPermission.Admin
-                           || message.IsModerator || message.IsBroadcaster)
+        if (sender is null || !message.IsModerator || sender.Permission > UserPermission.Admin)
         {
             client.SendMention(message.Channel, message.DisplayName, "Требуются права администратора");
             return;
@@ -104,7 +101,7 @@ public class UserUpdateCommand : ICommand
                            await _feedDbService.AddUser(command.ArgumentsAsList[1].ToLower());
 
         if (userToUpdate is null) return;
-        if (userToUpdate.Permission >= sender.Permission)
+        if (userToUpdate.Permission <= sender.Permission)
         {
             client.SendMention(message.Channel, message.DisplayName,
                 "Нельзя банить равного или выше тебя по рангу");
@@ -121,8 +118,7 @@ public class UserUpdateCommand : ICommand
     {
         if (!command.ArgumentsAsList.Any()) return;
         var sender = await _feedDbService.GetUserAsync(message.Username);
-        if (sender is null || sender.Permission > UserPermission.Admin
-                           || message.IsModerator || message.IsBroadcaster)
+        if (sender is null || !message.IsModerator || sender.Permission > UserPermission.Admin)
         {
             client.SendMention(message.Channel, message.DisplayName, "Требуются права администратора");
             return;
@@ -132,7 +128,7 @@ public class UserUpdateCommand : ICommand
                            await _feedDbService.AddUser(command.ArgumentsAsList[1].ToLower());
 
         if (userToUpdate is null) return;
-        if (userToUpdate.Permission >= sender.Permission)
+        if (userToUpdate.Permission <= sender.Permission)
         {
             client.SendMention(message.Channel, message.DisplayName,
                 "Нельзя разбанить равного или выше тебя по рангу");
