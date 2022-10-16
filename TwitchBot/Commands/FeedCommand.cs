@@ -60,7 +60,8 @@ public class FeedCommand : ICommand
 
         if (!command.ArgumentsAsList.Any())
         {
-            client.SendMention(message.Channel, message.DisplayName, $"Можно кормить {string.Join(" ", _availableSmiles)}");
+            client.SendMention(message.Channel, message.DisplayName,
+                $"Можно кормить {string.Join(" ", _availableSmiles)}");
             return;
         }
 
@@ -110,7 +111,8 @@ public class FeedCommand : ICommand
     private async Task Add(ITwitchClient client, ChatCommand command, ChatMessage message)
     {
         var sender = await _feedDbService.GetUserAsync(message.Username);
-        if (sender is null || sender.Permission > UserPermission.Moderator)
+        if (sender is null || sender.Permission > UserPermission.Moderator 
+                           || message.IsModerator || message.IsBroadcaster)
         {
             client.SendMention(message.Channel, message.DisplayName, "Требуются права модератора");
             return;
@@ -128,7 +130,7 @@ public class FeedCommand : ICommand
     {
         if (!command.ArgumentsAsList.Any()) return;
         var sender = await _feedDbService.GetUserAsync(message.Username);
-        if (sender is null || sender.Permission > UserPermission.Owner)
+        if (sender is null || sender.Permission > UserPermission.Owner || message.IsBroadcaster)
         {
             client.SendMention(message.Channel, message.DisplayName, "Требуются права администратора");
             return;

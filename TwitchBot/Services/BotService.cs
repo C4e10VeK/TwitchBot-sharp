@@ -44,7 +44,11 @@ public class BotService : BackgroundService
     private async Task OnMessageReceived(object? sender, OnMessageReceivedArgs e)
     {
         _logger.LogInformation("{User}: {Message}", e.ChatMessage.DisplayName, e.ChatMessage.Message);
+        var reactStrings = e.ChatMessage.Message.Split(" ")
+            .Where(s => s == "pirat")
+            .Aggregate((s, x) => s + " " + x);
         
+        _client.SendMessage(e.ChatMessage.Channel, reactStrings);
     }
     
     private async Task OnChatCommandReceived(object? sender, OnChatCommandReceivedArgs e)

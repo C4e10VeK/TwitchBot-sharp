@@ -40,7 +40,8 @@ public class UserUpdateCommand : ICommand
     private async Task Add(ITwitchClient client, ChatCommand command, ChatMessage message)
     {
         var sender = await _feedDbService.GetUserAsync(message.Username);
-        if (sender is null || sender.Permission > UserPermission.Moderator)
+        if (sender is null || sender.Permission > UserPermission.Moderator
+                           || message.IsModerator || message.IsBroadcaster)
         {
             client.SendMention(message.Channel, message.DisplayName, "Требуются права модератора");
             return;
@@ -58,7 +59,7 @@ public class UserUpdateCommand : ICommand
         if (command.ArgumentsAsList.Count < 3) return;
         if (!command.ArgumentsAsList.Any()) return;
         var sender = await _feedDbService.GetUserAsync(message.Username);
-        if (sender is null || sender.Permission > UserPermission.Owner)
+        if (sender is null || sender.Permission > UserPermission.Owner || message.IsBroadcaster)
         {
             client.SendMention(message.Channel, message.DisplayName, "Требуются права владельца");
             return;
@@ -92,7 +93,8 @@ public class UserUpdateCommand : ICommand
     {
         if (!command.ArgumentsAsList.Any()) return;
         var sender = await _feedDbService.GetUserAsync(message.Username);
-        if (sender is null || sender.Permission > UserPermission.Admin)
+        if (sender is null || sender.Permission > UserPermission.Admin
+                           || message.IsModerator || message.IsBroadcaster)
         {
             client.SendMention(message.Channel, message.DisplayName, "Требуются права администратора");
             return;
@@ -119,7 +121,8 @@ public class UserUpdateCommand : ICommand
     {
         if (!command.ArgumentsAsList.Any()) return;
         var sender = await _feedDbService.GetUserAsync(message.Username);
-        if (sender is null || sender.Permission > UserPermission.Admin)
+        if (sender is null || sender.Permission > UserPermission.Admin
+                           || message.IsModerator || message.IsBroadcaster)
         {
             client.SendMention(message.Channel, message.DisplayName, "Требуются права администратора");
             return;
