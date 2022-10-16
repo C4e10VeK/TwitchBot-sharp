@@ -1,3 +1,4 @@
+using System.Globalization;
 using TwitchBot.Extensions;
 using TwitchBot.Models;
 using TwitchBot.Services;
@@ -29,12 +30,12 @@ public class FeedCommand : ICommand
     {
         var smiles = (await _feedDbService.GetSmiles())
             .Where(e => e.FeedCount > 0)
-            .OrderBy(e => e.Size)
             .GroupBy(e => e.User)
             .Select(g => g.MaxBy(e => e.Size))
             .Take(new Range(0, 4))
-            .Reverse()
             .ToList();
+        
+        smiles.Sort((s1, s2) => s2.Size.CompareTo(s1.Size));
 
         var top = "Топ кормящих: ";
         for (var index = 0; index < smiles.Count; index++)
@@ -47,7 +48,7 @@ public class FeedCommand : ICommand
                 2 => "🥉",
                 _ => ""
             };
-            top += $"{index + 1}: {smile?.User}, смайл - {smile?.Name} размер - {smile?.Size}; ";
+            top += $"{index + 1}: {smile?.User}, смайл - {smile?.Name} , размер = {smile?.Size:n3} см; ";
         }
         
         client.SendMention(message.Channel, message.DisplayName, top);
@@ -78,7 +79,7 @@ public class FeedCommand : ICommand
             {
                 var timeToEnd = smile.Timer - DateTime.UtcNow;
                 client.SendMention(message.Channel, message.DisplayName,
-                    $"До следующей кормежки {timeToEnd.TotalHours:00}:{timeToEnd:mm\\:ss}. Жди");
+                    $"До следующей кормежки {timeToEnd.TotalHours:00}:{timeToEnd:mm\\:ss} peepoFAT . Жди");
                 return;
             }
             
@@ -88,7 +89,7 @@ public class FeedCommand : ICommand
             await _feedDbService.UpdateSmileAsync(smile.Id, smile);
 
             client.SendMention(message.Channel, message.DisplayName,
-                $"Ты покормил(а) {smile.Name} {smile.FeedCount} раз(а). Размер = {smile.Size}");
+                $"Ты покормил(а) {smile.Name} {smile.FeedCount} раз(а). Размер = {smile.Size:n3} см");
         }
         
         if (!command.ArgumentsAsList.Any()) return;
@@ -103,7 +104,7 @@ public class FeedCommand : ICommand
         var status = smiles
             .Where(e => e.FeedCount > 0)
             .Aggregate("Ты поккормил(а) - ",
-            (current, smile) => current + $"{smile.Name} {smile.FeedCount} раз(а), размер {smile.Size}; ");
+            (current, smile) => current + $"{smile.Name} {smile.FeedCount} раз(а), размер = {smile.Size:n3} см; ");
 
         client.SendMention(message.Channel, message.DisplayName, status);
     }
@@ -128,14 +129,133 @@ public class FeedCommand : ICommand
 
     private async Task Update(ITwitchClient client, ChatCommand command, ChatMessage message)
     {
-        if (!command.ArgumentsAsList.Any()) return;
+        if (command.ArgumentsAsList.Count < 2) return;
         var sender = await _feedDbService.GetUserAsync(message.Username);
         if (sender is null || sender.Permission > UserPermission.Owner || message.IsBroadcaster)
         {
             client.SendMention(message.Channel, message.DisplayName, "Требуются права администратора");
             return;
         }
+
+        if (command.ArgumentsAsList.Count < 3) return;
+        var foundUser = await _feedDbService.GetUserAsync(command.ArgumentsAsList[2].ToLower());
         
+        if (command.ArgumentsAsList[1] == "reset")
+        {
+            await ResetTimer(foundUser, command.ArgumentsAsList.ToArray()[3..]);
+        }
+
+        if (command.ArgumentsAsList[1] == "size")
+        {
+            await SetSize(foundUser, command.ArgumentsAsList.ToArray()[3..]);
+        }
+
+        if (command.ArgumentsAsList[1] == "count")
+        {
+            await SetCount(foundUser, command.ArgumentsAsList.ToArray()[3..]);
+        }
         
+        if (command.ArgumentsAsList[1] == "time")
+        {
+            await SetTime(foundUser, command.ArgumentsAsList.ToArray()[3..]);
+        }
+    }
+
+    private async Task ResetTimer(User? user, IReadOnlyList<string> args)
+    {
+        if (user is null) return;
+        if (args.Count == 1)
+        {
+            var smile = await _feedDbService.GetSmileAsync(user, args[0]);
+            if (smile is null) return;
+                
+            smile.Timer = DateTime.UtcNow;
+            await _feedDbService.UpdateSmileAsync(smile.Id, smile);
+            return;
+        }
+        var smiles = (await _feedDbService.GetSmiles(user))
+            .Where(s => s.FeedCount > 0);
+        foreach (var smile in smiles)
+        {
+            smile.Timer = DateTime.UtcNow;
+            await _feedDbService.UpdateSmileAsync(smile.Id, smile);
+        }
+    }
+    
+    private async Task SetSize(User? user, IReadOnlyList<string> args)
+    {
+        if (user is null || !args.Any()) return;
+        if (args.Count == 2)
+        {
+            var smile = await _feedDbService.GetSmileAsync(user, args[0]);
+            if (smile is null) return;
+
+            if (!float.TryParse(args[1], NumberStyles.Float, CultureInfo.InvariantCulture, out var result))
+                return;
+
+            smile.Size = result;
+            await _feedDbService.UpdateSmileAsync(smile.Id, smile);
+            return;
+        }
+        if (!float.TryParse(args[0], NumberStyles.Float, CultureInfo.InvariantCulture, out var value))
+            return;
+        var smiles = await _feedDbService.GetSmiles(user);
+        foreach (var smile in smiles)
+        {
+            smile.Size = value;
+            await _feedDbService.UpdateSmileAsync(smile.Id, smile);
+        }
+    }
+
+    private async Task SetCount(User? user, IReadOnlyList<string> args)
+    {
+        if (user is null || !args.Any()) return;
+        if (args.Count == 2)
+        {
+            var smile = await _feedDbService.GetSmileAsync(user, args[0]);
+            if (smile is null) return;
+            
+            if (!int.TryParse(args[1], out var result))
+                return;
+            
+            smile.FeedCount = result;
+            await _feedDbService.UpdateSmileAsync(smile.Id, smile);
+            return;
+        }
+        
+        if (!int.TryParse(args[1], out var value))
+            return;
+        var smiles = await _feedDbService.GetSmiles(user);
+        foreach (var smile in smiles)
+        {
+            smile.FeedCount = value;
+            await _feedDbService.UpdateSmileAsync(smile.Id, smile);
+        }
+    }
+    
+    private async Task SetTime(User? user, IReadOnlyList<string> args)
+    {
+        if (user is null || !args.Any()) return;
+        if (args.Count == 2)
+        {
+            var smile = await _feedDbService.GetSmileAsync(user, args[0]);
+            if (smile is null) return;
+            
+            if (!int.TryParse(args[1], out var result))
+                return;
+            
+            smile.Timer = DateTime.UtcNow + TimeSpan.FromMinutes(result);
+            await _feedDbService.UpdateSmileAsync(smile.Id, smile);
+            return;
+        }
+        
+        if (!int.TryParse(args[1], out var value))
+            return;
+        var smiles = await _feedDbService.GetSmiles(user);
+        foreach (var smile in smiles)
+        {
+            smile.Timer = DateTime.UtcNow + TimeSpan.FromMinutes(value);
+            await _feedDbService.UpdateSmileAsync(smile.Id, smile);
+        }
     }
 }

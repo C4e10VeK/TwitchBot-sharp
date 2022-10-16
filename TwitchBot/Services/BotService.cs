@@ -47,7 +47,7 @@ public class BotService : BackgroundService
         var reactStrings = e.ChatMessage.Message.Split(" ")
             .Where(s => s == "pirat")
             .Aggregate((s, x) => s + " " + x);
-        
+
         _client.SendMessage(e.ChatMessage.Channel, reactStrings);
     }
     
