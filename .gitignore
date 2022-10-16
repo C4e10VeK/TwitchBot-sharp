@@ -1,2 +1,3 @@
 .idea
-./TwitchBot/bin
+TwitchBot/bin
+TwitchBot/obj
