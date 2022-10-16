@@ -32,6 +32,7 @@ public class BotService : BackgroundService
         
         _commands.Add("feed", new FeedCommand(_feedDbService));
         _commands.Add("user", new UserUpdateCommand(_feedDbService));
+        _commands.Add("help", new HelpCommand());
     }
 
     private void ClientOnOnLog(object? sender, OnLogArgs e)
@@ -64,11 +65,17 @@ public class BotService : BackgroundService
             await cmd.Execute(_client, command, chatMessage);
     }
     
-    private async void ClientOnChatCommandReceived(object? sender, OnChatCommandReceivedArgs e) =>
-        await OnChatCommandReceived(sender, e);
+    private void ClientOnChatCommandReceived(object? sender, OnChatCommandReceivedArgs e)
+    {
+        var token = new CancellationToken();
+        Task.Run(async () => await OnChatCommandReceived(sender, e), token);
+    }
 
-    private async void ClientOnMessageReceived(object? sender, OnMessageReceivedArgs e) =>
-        await OnMessageReceived(sender, e);
+    private void ClientOnMessageReceived(object? sender, OnMessageReceivedArgs e)
+    {
+        var token = new CancellationToken();
+        Task.Run(async () => await OnMessageReceived(sender, e), token);
+    }
 
     protected override async Task ExecuteAsync(CancellationToken stoppingToken)
     {

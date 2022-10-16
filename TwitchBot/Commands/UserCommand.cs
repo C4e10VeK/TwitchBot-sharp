@@ -19,8 +19,16 @@ public class UserUpdateCommand : ICommand
         _subCommands.Add("unban", Unban);
         _subCommands.Add("permission", SetPermission);
         _subCommands.Add("add", Add);
+        _subCommands.Add("help", GetHelp);
     }
-    
+
+    private Task GetHelp(ITwitchClient client, ChatCommand command, ChatMessage message)
+    {
+        client.SendMention(message.Channel, message.DisplayName,
+            "https://github.com/C4e10VeK/TwitchBot-sharp/blob/master/Help/Help.md");
+        return Task.CompletedTask;
+    }
+
     public async Task Execute(ITwitchClient client, ChatCommand command, ChatMessage message)
     {
         if (!command.ArgumentsAsList.Any()) return;

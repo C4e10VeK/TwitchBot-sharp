@@ -21,13 +21,48 @@ public class FeedCommand : ICommand
             {"add", Add}
         };
         _subCommands.Add("status", GetStatus);
+        _subCommands.Add("top", GetTop);
         _availableSmiles = _feedDbService.GetAvailableSmiles().Result;
     }
-    
+
+    private async Task GetTop(ITwitchClient client, ChatCommand command, ChatMessage message)
+    {
+        var smiles = (await _feedDbService.GetSmiles())
+            .Where(e => e.FeedCount > 0)
+            .OrderBy(e => e.Size)
+            .GroupBy(e => e.User)
+            .Select(g => g.MaxBy(e => e.Size))
+            .Take(new Range(0, 4))
+            .Reverse()
+            .ToList();
+
+        var top = "Топ кормящих: ";
+        for (var index = 0; index < smiles.Count; index++)
+        {
+            var smile = smiles[index];
+            top += index switch
+            {
+                0 => "👑",
+                1 => "🥈",
+                2 => "🥉",
+                _ => ""
+            };
+            top += $"{index + 1}: {smile?.User}, смайл - {smile?.Name} размер - {smile?.Size}; ";
+        }
+        
+        client.SendMention(message.Channel, message.DisplayName, top);
+    }
+
     public async Task Execute(ITwitchClient client, ChatCommand command, ChatMessage message)
     {
         var foundUser = await _feedDbService.GetUserAsync(message.Username) ??
                         await _feedDbService.AddUser(message.Username);
+
+        if (!command.ArgumentsAsList.Any())
+        {
+            client.SendMention(message.Channel, message.DisplayName, $"Можно кормить {string.Join(" ", _availableSmiles)}");
+            return;
+        }
 
         if (command.ArgumentsAsList.Count == 1 && _availableSmiles.Any(s => s == command.ArgumentsAsList[0]))
         {
@@ -47,7 +82,7 @@ public class FeedCommand : ICommand
             }
             
             smile.FeedCount++;
-            smile.Size += new Random().NextFloat(0.005f, 0.5f);
+            smile.Size += (float)Math.Round(new Random().NextFloat(0.5f, 0.005f), 3);
             smile.Timer = DateTime.UtcNow + TimeSpan.FromMinutes(5);
             await _feedDbService.UpdateSmileAsync(smile.Id, smile);
 
@@ -99,51 +134,6 @@ public class FeedCommand : ICommand
             return;
         }
         
-        if (command.ArgumentsAsList.Count < 4) return;
-        var userToUpdate = await _feedDbService.GetUserAsync(command.ArgumentsAsList[1].ToLower()) ??
-                           await _feedDbService.AddUser(command.ArgumentsAsList[1].ToLower());
         
-        if (userToUpdate is null) return;
-        var smile = await _feedDbService.GetSmileAsync(userToUpdate, command.ArgumentsAsList[2]) ??
-                    await _feedDbService.AddSmileAsync(userToUpdate, command.ArgumentsAsList[2]);
-        if (smile is null) return;
-        
-        if (command.ArgumentsAsList[3] == "size")
-        {
-            if (command.ArgumentsAsList.Count < 5) return;
-            if (!float.TryParse(command.ArgumentsAsList[4], out var result)) return;
-            smile.Size = result;
-
-            await _feedDbService.UpdateSmileAsync(smile.Id, smile);
-            client.SendMention(message.Channel, message.DisplayName, "Размер обновлен");
-        }
-        if (command.ArgumentsAsList[3] == "count")
-        {
-            if (command.ArgumentsAsList.Count < 5) return;
-            if (!int.TryParse(command.ArgumentsAsList[4], out var result)) return;
-            smile.FeedCount = result;
-
-            await _feedDbService.UpdateSmileAsync(smile.Id, smile);
-            client.SendMention(message.Channel, message.DisplayName, "Количество обновлен");
-        }
-        if (command.ArgumentsAsList[3] == "timer")
-        {
-            if (command.ArgumentsAsList.Count < 5) return;
-            if (command.ArgumentsAsList[4] == "reset")
-            {
-                smile.Timer = DateTime.UtcNow;
-                await _feedDbService.UpdateSmileAsync(smile.Id, smile);
-                client.SendMention(message.Channel, message.DisplayName, "Таймер обновлен");
-            }
-            if (command.ArgumentsAsList.Count < 6) return;
-            if (command.ArgumentsAsList[4] == "add")
-            {
-                if (!int.TryParse(command.ArgumentsAsList[5], out var result)) return;
-                smile.Timer += TimeSpan.FromMinutes(result);
-            }
-            
-            await _feedDbService.UpdateSmileAsync(smile.Id, smile);
-            client.SendMention(message.Channel, message.DisplayName, "Таймер обновлен");
-        }
     }
 }
