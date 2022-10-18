@@ -1,20 +1,21 @@
 using System.Reflection;
+using TwitchBot.CommandLib.Models;
 
 namespace TwitchBot.CommandLib;
 
-public class Command
+internal class Command
 {
-    public string? Name { get; set; }
+    internal string? Name { get; set; }
 
-    public ICommandModule? Module { get; set; }
+    internal ICommandModule? Module { get; set; }
 
-    public MethodInfo? CommandMethod { get; set; }
+    internal MethodInfo? CommandMethod { get; set; }
 
-    public Command? Parent { get; set; } = null;
+    internal Command? Parent { get; set; }
 
-    public IReadOnlyList<Command>? Childrens { get; set; } = null;
+    internal IReadOnlyList<Command>? Children { get; set; }
 
-    public async Task Execute(CommandContext context)
+    internal async Task Execute(CommandContext context)
     {
         if (Module is null) return;
 

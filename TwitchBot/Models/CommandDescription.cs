@@ -1,4 +1,4 @@
-using TwitchBot.CommandLib;
+using TwitchBot.CommandLib.Models;
 using TwitchLib.Client.Interfaces;
 using TwitchLib.Client.Models;
 

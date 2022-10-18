@@ -4,13 +4,14 @@ using TwitchBot.Extensions;
 using TwitchBot.Models;
 using TwitchBot.Services;
 using TwitchBot.CommandLib.Attributes;
+using TwitchBot.CommandLib.Models;
 using TwitchLib.Client.Interfaces;
 using TwitchLib.Client.Models;
 
 namespace TwitchBot.Commands;
 
 [Group(Name = "feed")]
-public class FeedCommand : ICommandModule
+public class FeedCommand : CommandModule
 {
     private readonly FeedDbService _feedDbService;
     private List<string?> _availableSmiles;
@@ -54,7 +55,7 @@ public class FeedCommand : ICommandModule
         description.Client.SendMention(description.Message.Channel, description.Message.DisplayName, top);
     }
 
-    public async Task Execute(CommandContext context)
+    public override async Task Execute(CommandContext context)
     {
         if (context.Description is not CommandDescription description) return;
         

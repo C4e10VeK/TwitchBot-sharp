@@ -1,13 +1,13 @@
-using System.Diagnostics.CodeAnalysis;
 using TwitchBot.CommandLib;
 using TwitchBot.CommandLib.Attributes;
+using TwitchBot.CommandLib.Models;
 using TwitchBot.Extensions;
 using TwitchBot.Models;
 using TwitchBot.Services;
 
 namespace TwitchBot.Commands;
 
-public class UserCommand : ICommandModule
+public class UserCommand : CommandModule
 {
     private readonly FeedDbService _databaseService;
 
@@ -17,7 +17,7 @@ public class UserCommand : ICommandModule
     }
 
     [Command(Name = "help")]
-    public Task Execute(CommandContext context)
+    public Task GetHelp(CommandContext context)
     {
         if (context.Description is not CommandDescription description) return Task.CompletedTask;
         

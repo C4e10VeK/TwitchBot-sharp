@@ -1,4 +1,4 @@
-namespace TwitchBot.CommandLib;
+namespace TwitchBot.CommandLib.Models;
 
 public interface ICommandDescription
 {

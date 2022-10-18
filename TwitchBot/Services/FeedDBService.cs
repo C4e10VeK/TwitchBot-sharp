@@ -142,7 +142,7 @@ public class FeedDbService
         var emojis = await GetSmiles(user);
         if (emojis.Count != availableEmojis.Count)
         {
-            foreach (var availableEmoji in availableEmojis.Where(availableEmoji => !emojis.Any(e => e.Name == availableEmoji)))
+            foreach (var availableEmoji in availableEmojis.Where(availableEmoji => emojis.All(e => e.Name != availableEmoji)))
             {
                 var emoji = await AddSmileAsync(user, availableEmoji) ?? throw new InvalidOperationException();
                 emojis.Add(emoji);

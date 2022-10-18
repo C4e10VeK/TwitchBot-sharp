@@ -1,5 +1,6 @@
 using Microsoft.Extensions.Options;
 using TwitchBot.CommandLib;
+using TwitchBot.CommandLib.Models;
 using TwitchBot.Commands;
 using TwitchBot.Extensions;
 using TwitchBot.Models;
@@ -66,13 +67,14 @@ public class BotService : BackgroundService
         // _logger.LogInformation("{Message}", e.Data);
     }
 
-    private async Task OnMessageReceived(object? sender, OnMessageReceivedArgs e)
+    private Task OnMessageReceived(object? sender, OnMessageReceivedArgs e)
     {
         var reactStrings = e.ChatMessage.Message.Split(" ")
             .Where(s => s == "pirat")
             .Aggregate((s, x) => s + " " + x);
 
         _client.SendMessage(e.ChatMessage.Channel, reactStrings);
+        return Task.CompletedTask;
     }
     
     private async Task OnChatCommandReceived(object? sender, OnChatCommandReceivedArgs e)

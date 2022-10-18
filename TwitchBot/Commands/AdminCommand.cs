@@ -1,12 +1,13 @@
 using TwitchBot.CommandLib;
 using TwitchBot.CommandLib.Attributes;
+using TwitchBot.CommandLib.Models;
 using TwitchBot.Extensions;
 using TwitchBot.Models;
 using TwitchBot.Services;
 
 namespace TwitchBot.Commands;
 
-public class AdminCommand : ICommandModule
+public class AdminCommand : CommandModule
 {
     private readonly FeedDbService _databaseService;
     
@@ -14,12 +15,7 @@ public class AdminCommand : ICommandModule
     {
         _databaseService = databaseService;
     }
-    
-    public Task Execute(CommandContext ctx)
-    {
-        return Task.CompletedTask;
-    }
-    
+
     [Command(Name = "ban")]
     public async Task Ban(CommandContext context)
     {

@@ -13,5 +13,5 @@ public class User
 
     public bool IsBanned { get; set; } = false;
 
-    public Dictionary<string?, ObjectId> FeedSmiles { get; set; } = new();
+    public Dictionary<string, ObjectId> FeedSmiles { get; set; } = new();
 }
