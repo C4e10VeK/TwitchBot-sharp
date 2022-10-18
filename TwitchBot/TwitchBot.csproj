@@ -13,4 +13,8 @@
         <PackageReference Include="MongoDB.Driver" Version="2.17.1" />
         <PackageReference Include="TwitchLib" Version="3.4.1" />
     </ItemGroup>
+
+    <ItemGroup>
+      <ProjectReference Include="..\TwitchBot.CommandLib\TwitchBot.CommandLib.csproj" />
+    </ItemGroup>
 </Project>

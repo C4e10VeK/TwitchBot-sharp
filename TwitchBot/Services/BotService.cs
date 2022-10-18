@@ -1,4 +1,5 @@
 using Microsoft.Extensions.Options;
+using TwitchBot.CommandLib;
 using TwitchBot.Commands;
 using TwitchBot.Extensions;
 using TwitchBot.Models;
@@ -13,7 +14,7 @@ public class BotService : BackgroundService
     private readonly TwitchClient _client;
     private readonly ILogger<BotService> _logger;
     private readonly FeedDbService _feedDbService;
-    private readonly Dictionary<string, ICommand> _commands;
+    private readonly CommandContainer _commandContainer;
 
     public BotService(ILogger<BotService> logger, IOptions<BotConfig> options, FeedDbService service)
     {
@@ -24,15 +25,14 @@ public class BotService : BackgroundService
         _client.Initialize(credentials, config.Channels, config.Prefix);
         _logger = logger;
         _feedDbService = service;
-        _commands = new Dictionary<string, ICommand>();
         
         _client.OnLog += ClientOnOnLog;
         _client.OnMessageReceived += ClientOnMessageReceived;
         _client.OnChatCommandReceived += ClientOnChatCommandReceived;
-        
-        _commands.Add("feed", new FeedCommand(_feedDbService));
-        _commands.Add("user", new UserUpdateCommand(_feedDbService));
-        _commands.Add("help", new HelpCommand());
+
+        _commandContainer = new CommandContainer()
+            .Add<FeedCommand>(service)
+            .Add<UserCommand>(service);
     }
 
     private void ClientOnOnLog(object? sender, OnLogArgs e)
@@ -65,8 +65,17 @@ public class BotService : BackgroundService
             return;
         }
 
-        if (_commands.TryGetValue(command.CommandText, out var cmd))
-            await cmd.Execute(_client, command, chatMessage);
+        var commandContext = new CommandContext
+        {
+            Description = new CommandDescription
+            {
+                Client = _client,
+                Message = chatMessage
+            },
+            Arguments = command.ArgumentsAsList
+        };
+
+        await _commandContainer.Execute(command.CommandText, commandContext);
     }
     
     private void ClientOnChatCommandReceived(object? sender, OnChatCommandReceivedArgs e)

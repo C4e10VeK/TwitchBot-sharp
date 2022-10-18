@@ -1,6 +1,9 @@
 ﻿
 Microsoft Visual Studio Solution File, Format Version 12.00
+# 
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "TwitchBot", "TwitchBot\TwitchBot.csproj", "{DA26DD80-61A8-45EA-956D-E7D0C1871FC7}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "TwitchBot.CommandLib", "TwitchBot.CommandLib\TwitchBot.CommandLib.csproj", "{52F2D1F4-6F74-491A-B194-3571D6A6BC5C}"
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
@@ -12,5 +15,9 @@ Global
 		{DA26DD80-61A8-45EA-956D-E7D0C1871FC7}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{DA26DD80-61A8-45EA-956D-E7D0C1871FC7}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{DA26DD80-61A8-45EA-956D-E7D0C1871FC7}.Release|Any CPU.Build.0 = Release|Any CPU
+		{52F2D1F4-6F74-491A-B194-3571D6A6BC5C}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{52F2D1F4-6F74-491A-B194-3571D6A6BC5C}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{52F2D1F4-6F74-491A-B194-3571D6A6BC5C}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{52F2D1F4-6F74-491A-B194-3571D6A6BC5C}.Release|Any CPU.Build.0 = Release|Any CPU
 	EndGlobalSection
 EndGlobal

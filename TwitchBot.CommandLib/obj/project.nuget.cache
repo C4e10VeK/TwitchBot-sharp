@@ -1,0 +1,11 @@
+{
+  "version": 2,
+  "dgSpecHash": "I1v4ClbRVI7JvwgpsDwsPZg7ecTPxDjVJQtb/Pga5YFTOfNqbDsWlliH+OpZE5EEBQIUKB7uh4jdWkaprPQ5Ow==",
+  "success": true,
+  "projectFilePath": "/home/archweeb/RiderProjects/TwitchBot/TwitchBot.CommandLib/TwitchBot.CommandLib.csproj",
+  "expectedPackageFiles": [
+    "/home/archweeb/.nuget/packages/microsoft.extensions.dependencyinjection.abstractions/6.0.0/microsoft.extensions.dependencyinjection.abstractions.6.0.0.nupkg.sha512",
+    "/home/archweeb/.nuget/packages/microsoft.aspnetcore.app.ref/6.0.10/microsoft.aspnetcore.app.ref.6.0.10.nupkg.sha512"
+  ],
+  "logs": []
+}

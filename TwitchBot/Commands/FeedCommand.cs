@@ -1,33 +1,33 @@
 using System.Globalization;
+using TwitchBot.CommandLib;
 using TwitchBot.Extensions;
 using TwitchBot.Models;
 using TwitchBot.Services;
+using TwitchBot.CommandLib.Attributes;
 using TwitchLib.Client.Interfaces;
 using TwitchLib.Client.Models;
 
 namespace TwitchBot.Commands;
 
-public class FeedCommand : ICommand
+[Group(Name = "feed")]
+public class FeedCommand : ICommandModule
 {
     private readonly FeedDbService _feedDbService;
-    private readonly Dictionary<string, Func<ITwitchClient, ChatCommand, ChatMessage, Task>> _subCommands;
     private List<string?> _availableSmiles;
 
+    public FeedCommand() { }
+    
     public FeedCommand(FeedDbService feedDbService)
     {
         _feedDbService = feedDbService;
-        _subCommands = new Dictionary<string, Func<ITwitchClient, ChatCommand, ChatMessage, Task>>
-        {
-            {"update", Update},
-            {"add", Add},
-            {"status", GetStatus},
-            {"top", GetTop}
-        };
         _availableSmiles = _feedDbService.GetAvailableSmiles().Result;
     }
 
-    private async Task GetTop(ITwitchClient client, ChatCommand command, ChatMessage message)
+    [Command(Name = "top")]
+    public async Task GetTop(CommandContext context)
     {
+        if (context.Description is not CommandDescription description) return;
+        
         var smiles = (await _feedDbService.GetSmiles())
             .Where(e => e.FeedCount > 0)
             .GroupBy(e => e.User)
@@ -48,27 +48,29 @@ public class FeedCommand : ICommand
                 2 => "🥉",
                 _ => ""
             };
-            top += $"{index + 1}: {smile?.User}, смайл - {smile?.Name} , размер = {smile?.Size:n3} см; ";
+            top += $"{index + 1}: {smile?.User}, {smile?.Name} , размер = {smile?.Size:n3} см; ";
         }
         
-        client.SendMention(message.Channel, message.DisplayName, top);
+        description.Client.SendMention(description.Message.Channel, description.Message.DisplayName, top);
     }
 
-    public async Task Execute(ITwitchClient client, ChatCommand command, ChatMessage message)
+    public async Task Execute(CommandContext context)
     {
-        var foundUser = await _feedDbService.GetUserAsync(message.Username) ??
-                        await _feedDbService.AddUser(message.Username);
+        if (context.Description is not CommandDescription description) return;
+        
+        var foundUser = await _feedDbService.GetUserAsync(description.Message.Username) ??
+                        await _feedDbService.AddUser(description.Message.Username);
 
-        if (!command.ArgumentsAsList.Any())
+        if (!context.Arguments.Any())
         {
-            client.SendMention(message.Channel, message.DisplayName,
+            description.Client.SendMention(description.Message.Channel, description.Message.DisplayName,
                 $"Можно кормить {string.Join(" ", _availableSmiles)}");
             return;
         }
 
-        if (command.ArgumentsAsList.Count == 1 && _availableSmiles.Any(s => s == command.ArgumentsAsList[0]))
+        if (_availableSmiles.Any(s => s == context.Arguments.First()))
         {
-            var smileName = command.ArgumentsAsList.First();
+            var smileName = context.Arguments.First();
             if (foundUser is null) return;
 
             var smileId = foundUser.FeedSmiles[smileName];
@@ -79,7 +81,7 @@ public class FeedCommand : ICommand
             if (smile.Timer > DateTime.UtcNow)
             {
                 var timeToEnd = smile.Timer - DateTime.UtcNow;
-                client.SendMention(message.Channel, message.DisplayName,
+                description.Client.SendMention(description.Message.Channel, description.Message.DisplayName,
                     $"До следующей кормежки {timeToEnd.TotalHours:00}:{timeToEnd:mm\\:ss} peepoFAT . Жди");
                 return;
             }
@@ -89,78 +91,90 @@ public class FeedCommand : ICommand
             smile.Timer = DateTime.UtcNow + TimeSpan.FromMinutes(5);
             await _feedDbService.UpdateSmileAsync(smile.Id, smile);
 
-            client.SendMention(message.Channel, message.DisplayName,
+            description.Client.SendMention(description.Message.Channel, description.Message.DisplayName,
                 $"Ты покормил(а) {smile.Name} {smile.FeedCount} раз(а). Размер = {smile.Size:n3} см");
         }
-        
-        if (!command.ArgumentsAsList.Any()) return;
-
-        if (_subCommands.TryGetValue(command.ArgumentsAsList[0], out var cmd))
-            await cmd.Invoke(client, command, message);
     }
 
-    private async Task GetStatus(ITwitchClient client, ChatCommand command, ChatMessage message)
+    [Command(Name = "status")]
+    public async Task GetStatus(CommandContext context)
     {
-        var userName = command.ArgumentsAsList.Count < 2 ? message.Username : command.ArgumentsAsList[1];
-        var statusStart = command.ArgumentsAsList.Count < 2 ? "Ты покормил(а) - " : $"{userName} покормил(а) = ";
-        var smiles = await _feedDbService.GetSmiles(userName);
-        if (!smiles.Any()) return;
+        if (context.Description is not CommandDescription description) return;
+        
+        var userName = context.Arguments.Any() ? context.Arguments.First() : description.Message.Username;
+        var statusStart = context.Arguments.Any() ? $"{userName} покормил(а) - " : "Ты покормил(а) - ";
+        var smiles = await _feedDbService.GetSmiles(userName.ToLower());
+        if (!smiles.Any())
+        {
+            description.Client.SendMention(description.Message.Channel, description.Message.DisplayName, 
+                $"{userName} еще никого не кормил");
+            return;
+        }
         var status = smiles
             .Where(e => e.FeedCount > 0)
             .Aggregate(statusStart,
             (current, smile) => current + $"{smile.Name} {smile.FeedCount} раз(а), размер = {smile.Size:n3} см; ");
 
-        client.SendMention(message.Channel, message.DisplayName, status);
+        description.Client.SendMention(description.Message.Channel, description.Message.DisplayName, status);
     }
 
-    private async Task Add(ITwitchClient client, ChatCommand command, ChatMessage message)
+    [Command(Name = "add")]
+    public async Task Add(CommandContext context)
     {
-        var sender = await _feedDbService.GetUserAsync(message.Username);
-        if (sender is null || !message.IsModerator || sender.Permission > UserPermission.Moderator)
+        if (context.Description is not CommandDescription description) return;
+        
+        var sender = await _feedDbService.GetUserAsync(description.Message.Username);
+        if (sender is null || !description.Message.IsModerator || sender.Permission > UserPermission.Moderator)
         {
-            client.SendMention(message.Channel, message.DisplayName, "Требуются права модератора");
+            description.Client.SendMention(description.Message.Channel, description.Message.DisplayName,
+                    "Требуются права модератора");
             return;
         }
 
-        if (command.ArgumentsAsList.Count < 2) return;
+        if (!context.Arguments.Any()) return;
 
-        var smileToAdd = command.ArgumentsAsList[1];
+        var smileToAdd = context.Arguments.First();
         await _feedDbService.AddAvailableSmile(smileToAdd);
         _availableSmiles = await _feedDbService.GetAvailableSmiles();
-        client.SendMention(message.Channel, message.DisplayName, $"Смайл {smileToAdd} добавлен");
+        description.Client.SendMention(description.Message.Channel, description.Message.DisplayName,
+            $"Смайл {smileToAdd} добавлен");
     }
 
-    private async Task Update(ITwitchClient client, ChatCommand command, ChatMessage message)
+    [Command(Name = "update")]
+    public async Task Update(CommandContext context)
     {
-        if (command.ArgumentsAsList.Count < 2) return;
-        var sender = await _feedDbService.GetUserAsync(message.Username);
+        if (context.Description is not CommandDescription description) return;
+        
+        if (!context.Arguments.Any()) return;
+        var sender = await _feedDbService.GetUserAsync(description.Message.Username);
         if (sender is null || sender.Permission > UserPermission.Owner)
         {
-            client.SendMention(message.Channel, message.DisplayName, "Требуются права администратора");
+            description.Client.SendMention(description.Message.Channel, description.Message.DisplayName,
+                "Требуются права администратора");
             return;
         }
 
-        if (command.ArgumentsAsList.Count < 3) return;
-        var foundUser = await _feedDbService.GetUserAsync(command.ArgumentsAsList[2].ToLower());
+        if (context.Arguments.Count < 2) return;
+        var foundUser = await _feedDbService.GetUserAsync(context.Arguments[1].ToLower());
         
-        if (command.ArgumentsAsList[1] == "reset")
+        if (context.Arguments.First() == "reset")
         {
-            await ResetTimer(foundUser, command.ArgumentsAsList.ToArray()[3..]);
-        }
-
-        if (command.ArgumentsAsList[1] == "size")
-        {
-            await SetSize(foundUser, command.ArgumentsAsList.ToArray()[3..]);
-        }
-
-        if (command.ArgumentsAsList[1] == "count")
-        {
-            await SetCount(foundUser, command.ArgumentsAsList.ToArray()[3..]);
+            await ResetTimer(foundUser, context.Arguments.ToArray()[2..]);
         }
         
-        if (command.ArgumentsAsList[1] == "time")
+        if (context.Arguments.First() == "size")
         {
-            await SetTime(foundUser, command.ArgumentsAsList.ToArray()[3..]);
+            await SetSize(foundUser, context.Arguments.ToArray()[2..]);
+        }
+        
+        if (context.Arguments.First() == "count")
+        {
+            await SetCount(foundUser, context.Arguments.ToArray()[2..]);
+        }
+        
+        if (context.Arguments.First() == "time")
+        {
+            await SetTime(foundUser, context.Arguments.ToArray()[2..]);
         }
     }
 
@@ -226,7 +240,7 @@ public class FeedCommand : ICommand
             return;
         }
         
-        if (!int.TryParse(args[1], out var value))
+        if (!int.TryParse(args[0], out var value))
             return;
         var smiles = await _feedDbService.GetSmiles(user);
         foreach (var smile in smiles)
@@ -252,7 +266,7 @@ public class FeedCommand : ICommand
             return;
         }
         
-        if (!int.TryParse(args[1], out var value))
+        if (!int.TryParse(args[0], out var value))
             return;
         var smiles = await _feedDbService.GetSmiles(user);
         foreach (var smile in smiles)
