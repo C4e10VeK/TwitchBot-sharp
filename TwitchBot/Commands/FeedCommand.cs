@@ -37,7 +37,7 @@ public class FeedCommand : ICommandModule
         
         smiles.Sort((s1, s2) => s2.Size.CompareTo(s1.Size));
 
-        var top = "Топ кормящих: ";
+        var top = "Топ кормильцев: ";
         for (var index = 0; index < smiles.Count; index++)
         {
             var smile = smiles[index];

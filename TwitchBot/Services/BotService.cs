@@ -3,15 +3,19 @@ using TwitchBot.CommandLib;
 using TwitchBot.Commands;
 using TwitchBot.Extensions;
 using TwitchBot.Models;
+using TwitchLib.Api;
+using TwitchLib.Api.Core.HttpCallHandlers;
 using TwitchLib.Client;
 using TwitchLib.Client.Events;
 using TwitchLib.Client.Models;
+using TwitchLib.PubSub;
 
 namespace TwitchBot.Services;
 
 public class BotService : BackgroundService
 {
     private readonly TwitchClient _client;
+    private readonly List<TwitchPubSub> _pubSubs;
     private readonly ILogger<BotService> _logger;
     private readonly FeedDbService _feedDbService;
     private readonly CommandContainer _commandContainer;
@@ -22,6 +26,7 @@ public class BotService : BackgroundService
         var credentials = new ConnectionCredentials(config.Name, config.Token);
 
         _client = new TwitchClient();
+        _pubSubs = new List<TwitchPubSub>();
         _client.Initialize(credentials, config.Channels, config.Prefix);
         _logger = logger;
         _feedDbService = service;
@@ -30,6 +35,25 @@ public class BotService : BackgroundService
         _client.OnMessageReceived += ClientOnMessageReceived;
         _client.OnChatCommandReceived += ClientOnChatCommandReceived;
 
+        foreach (var channel in config.Channels)
+        {
+            var pubSub = new TwitchPubSub();
+            pubSub.OnStreamUp += (sender, args) => Task.Run(() =>
+            {
+                _client.SendMessage(args.ChannelId, $"{args.ChannelId} запустил поток Pog");
+            });
+            
+            pubSub.OnStreamDown += (sender, args) => Task.Run(() =>
+            {
+                _client.SendMessage(args.ChannelId, "Пока потокер FeelsWeakMan");
+            });
+
+            pubSub.ListenToVideoPlayback(channel);
+            pubSub.Connect();
+            
+            _pubSubs.Add(pubSub);
+        }
+        
         _commandContainer = new CommandContainer()
             .Add<FeedCommand>(service)
             .Add<UserCommand>(service);
@@ -37,13 +61,12 @@ public class BotService : BackgroundService
 
     private void ClientOnOnLog(object? sender, OnLogArgs e)
     {
-        if (e.Data is null) return; 
-        _logger.LogInformation("{Message}", e.Data);
+        // if (e.Data is null) return; 
+        // _logger.LogInformation("{Message}", e.Data);
     }
 
     private async Task OnMessageReceived(object? sender, OnMessageReceivedArgs e)
     {
-        _logger.LogInformation("{User}: {Message}", e.ChatMessage.DisplayName, e.ChatMessage.Message);
         var reactStrings = e.ChatMessage.Message.Split(" ")
             .Where(s => s == "pirat")
             .Aggregate((s, x) => s + " " + x);
