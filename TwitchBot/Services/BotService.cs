@@ -17,10 +17,10 @@ public class BotService : BackgroundService
     private readonly TwitchClient _client;
     private readonly List<TwitchPubSub> _pubSubs;
     private readonly ILogger<BotService> _logger;
-    private readonly FeedDbService _feedDbService;
+    private readonly FeedDbService _databaseService;
     private readonly CommandContainer _commandContainer;
 
-    public BotService(ILogger<BotService> logger, IOptions<BotConfig> options, FeedDbService service)
+    public BotService(ILogger<BotService> logger, IOptions<BotConfig> options, FeedDbService databaseService)
     {
         var config = options.Value;
         var credentials = new ConnectionCredentials(config.Name, config.Token);
@@ -29,7 +29,7 @@ public class BotService : BackgroundService
         _pubSubs = new List<TwitchPubSub>();
         _client.Initialize(credentials, config.Channels, config.Prefix);
         _logger = logger;
-        _feedDbService = service;
+        _databaseService = databaseService;
         
         _client.OnLog += ClientOnOnLog;
         _client.OnMessageReceived += ClientOnMessageReceived;
@@ -55,8 +55,9 @@ public class BotService : BackgroundService
         }
         
         _commandContainer = new CommandContainer()
-            .Add<FeedCommand>(service)
-            .Add<UserCommand>(service);
+            .Add<FeedCommand>(databaseService)
+            .Add<UserCommand>(databaseService)
+            .Add<AdminCommand>(databaseService);
     }
 
     private void ClientOnOnLog(object? sender, OnLogArgs e)
@@ -79,8 +80,8 @@ public class BotService : BackgroundService
         var command = e.Command;
         var chatMessage = command.ChatMessage;
         
-        var foundUser = await _feedDbService.GetUserAsync(chatMessage.Username) ??
-                        await _feedDbService.AddUser(chatMessage.Username);
+        var foundUser = await _databaseService.GetUserAsync(chatMessage.Username) ??
+                        await _databaseService.AddUser(chatMessage.Username);
 
         if (foundUser is {IsBanned: true})
         {
