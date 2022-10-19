@@ -10,8 +10,11 @@ public class User
     public ObjectId Id { get; set; }
     public string? Name { get; set; }
     public UserPermission Permission { get; set; }
-
     public bool IsBanned { get; set; } = false;
+    
+    public DateTime TimeToFeed { get; set; } = DateTime.UtcNow;
+
+    public int FeedCount { get; set; } = 0;
 
     public Dictionary<string, ObjectId> FeedSmiles { get; set; } = new();
 }

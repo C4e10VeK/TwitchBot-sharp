@@ -4,7 +4,7 @@ using TwitchLib.Client.Models;
 
 namespace TwitchBot.Models;
 
-public class CommandDescription : ICommandDescription
+public class TwitchCommandDescription : ICommandDescription
 {
     public ITwitchClient Client { get; set; }
     public ChatMessage Message { get; set; }

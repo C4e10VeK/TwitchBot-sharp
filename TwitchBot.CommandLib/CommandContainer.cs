@@ -1,6 +1,3 @@
-using System.Diagnostics.CodeAnalysis;
-using System.Reflection;
-using TwitchBot.CommandLib.Attributes;
 using TwitchBot.CommandLib.Models;
 
 namespace TwitchBot.CommandLib;
@@ -22,10 +19,14 @@ public class CommandContainer
 
         var commands = module.GetCommands(commandGroup);
 
+        if (commandGroup is not null)
+        {
+            commandGroup.Children = commands;
+            _commands.Add(commandGroup);
+            return this;
+        }
+        
         _commands.AddRange(commands);
-        if (commandGroup is null) return this;
-        commandGroup.Children = commands;
-        _commands.Add(commandGroup);
 
         return this;
     }
@@ -37,10 +38,14 @@ public class CommandContainer
 
         var commands = module.GetCommands(commandGroup);
 
+        if (commandGroup is not null)
+        {
+            commandGroup.Children = commands;
+            _commands.Add(commandGroup);
+            return this;
+        }
+        
         _commands.AddRange(commands);
-        if (commandGroup is null) return this;
-        commandGroup.Children = commands;
-        _commands.Add(commandGroup);
 
         return this;
     }

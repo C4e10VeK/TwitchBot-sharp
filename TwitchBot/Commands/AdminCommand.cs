@@ -19,122 +19,95 @@ public class AdminCommand : CommandModule
     [Command(Name = "ban")]
     public async Task Ban(CommandContext context)
     {
-        if (context.Description is not CommandDescription description) return;
+        if (context.Description is not TwitchCommandDescription description) return;
         
         if (!context.Arguments.Any()) return;
-        var sender = await _databaseService.GetUserAsync(description.Message.Username);
-        if (sender is null || !description.Message.IsModerator || sender.Permission > UserPermission.Admin)
+        
+        var channel = description.Message.Channel;
+        var message = description.Message;
+        
+        var foundUser = await _databaseService.GetUser(description.Message.Username) ??
+                        await _databaseService.AddUser(description.Message.Username);
+
+        if (foundUser is null || (foundUser.Permission > UserPermission.Admin))
         {
-            description.Client.SendMention(description.Message.Channel, description.Message.DisplayName,
-                "Требуются права администратора");
+            description.Client.SendReply(channel, message.Id, "Требуются права админа");
             return;
         }
 
-        var userToUpdate = await _databaseService.GetUserAsync(context.Arguments.First().ToLower()) ??
+        var userToUpdate = await _databaseService.GetUser(context.Arguments.First().ToLower()) ?? 
                            await _databaseService.AddUser(context.Arguments.First().ToLower());
-
         if (userToUpdate is null) return;
-        if (userToUpdate.Permission <= sender.Permission)
-        {
-            description.Client.SendMention(description.Message.Channel, description.Message.DisplayName,
-                "Нельзя банить равного или выше тебя по рангу");
-            return;
-        }
+
         userToUpdate.IsBanned = true;
 
-        await _databaseService.UpdateUserAsync(userToUpdate.Id, userToUpdate);
-
-        description.Client.SendMention(description.Message.Channel, description.Message.DisplayName,
-            $"{userToUpdate.Name} запрещено кормить!");
+        await _databaseService.UpdateUser(userToUpdate.Id, userToUpdate);
+        description.Client.SendReply(channel, message.Id, $"{context.Arguments.First()} был забанен!");
     }
     
     [Command(Name = "unban")]
     public async Task Unban(CommandContext context)
     {
-        if (context.Description is not CommandDescription description) return;
+        if (context.Description is not TwitchCommandDescription description) return;
         
         if (!context.Arguments.Any()) return;
         
-        var sender = await _databaseService.GetUserAsync(description.Message.Username);
-        if (sender is null || !description.Message.IsModerator || sender.Permission > UserPermission.Admin)
+        var channel = description.Message.Channel;
+        var message = description.Message;
+        
+        var foundUser = await _databaseService.GetUser(description.Message.Username) ??
+                        await _databaseService.AddUser(description.Message.Username);
+
+        if (foundUser is null || (foundUser.Permission > UserPermission.Admin))
         {
-            description.Client.SendMention(description.Message.Channel, description.Message.DisplayName,
-                "Требуются права администратора");
+            description.Client.SendReply(channel, message.Id, "Требуются права админа");
             return;
         }
-
-        var userToUpdate = await _databaseService.GetUserAsync(context.Arguments.First().ToLower()) ??
+        
+        var userToUpdate = await _databaseService.GetUser(context.Arguments.First().ToLower()) ?? 
                            await _databaseService.AddUser(context.Arguments.First().ToLower());
-
         if (userToUpdate is null) return;
-        if (userToUpdate.Permission <= sender.Permission)
-        {
-            description.Client.SendMention(description.Message.Channel, description.Message.DisplayName,
-                "Нельзя разбанить равного или выше тебя по рангу");
-            return;
-        }
+
         userToUpdate.IsBanned = false;
 
-        await _databaseService.UpdateUserAsync(userToUpdate.Id, userToUpdate);
-
-        description.Client.SendMention(description.Message.Channel, description.Message.DisplayName,
-            $"{userToUpdate.Name} разрешено кормить!");
+        await _databaseService.UpdateUser(userToUpdate.Id, userToUpdate);
+        description.Client.SendReply(channel, message.Id, $"{context.Arguments.First()} был разбанен!");
     }
     
     [Command(Name = "setperm")]
     public async Task SetPermission(CommandContext context)
     {
-        if (context.Description is not CommandDescription description) return ;
-        if (!context.Arguments.Any()) return;
-        var sender = await _databaseService.GetUserAsync(description.Message.Username);
-        if (sender is null || sender.Permission > UserPermission.Owner)
+        if (context.Description is not TwitchCommandDescription description) return;
+        
+        if (!context.Arguments.Any() || context.Arguments.Count < 2) return;
+        
+        var channel = description.Message.Channel;
+        var message = description.Message;
+        
+        var foundUser = await _databaseService.GetUser(description.Message.Username) ??
+                        await _databaseService.AddUser(description.Message.Username);
+
+        if (foundUser is null || (foundUser.Permission > UserPermission.Owner))
         {
-            description.Client.SendMention(description.Message.Channel, description.Message.DisplayName,
-                "Требуются права владельца");
+            description.Client.SendReply(channel, message.Id, "Требуются права владельца");
             return;
         }
         
-        var userToUpdate = await _databaseService.GetUserAsync(context.Arguments.First().ToLower()) ??
+        var userToUpdate = await _databaseService.GetUser(context.Arguments.First().ToLower()) ?? 
                            await _databaseService.AddUser(context.Arguments.First().ToLower());
-        
-        if (!int.TryParse(context.Arguments[1], out var result)) return;
         if (userToUpdate is null) return;
-        userToUpdate.Permission = result switch
+
+        if (!int.TryParse(context.Arguments[1], out var result)) return;
+        var permission = result switch
         {
             0 => UserPermission.Admin,
             1 => UserPermission.Moderator,
-            2 or _ => UserPermission.User
+            _ => UserPermission.User
         };
+        userToUpdate.Permission = permission; 
 
-        var permissionName = result switch
-        {
-            0 => UserPermission.Admin.ToString(),
-            1 => UserPermission.Moderator.ToString(),
-            2 or _ => UserPermission.User.ToString()
-        };
-        
-        await _databaseService.UpdateUserAsync(userToUpdate.Id, userToUpdate);
-        description.Client.SendMention(description.Message.Channel, description.Message.DisplayName,
-            $"Права {userToUpdate.Name} установлены на {permissionName}");
-    }
-    
-    [Command(Name = "add")]
-    public async Task Add(CommandContext context)
-    {
-        if (!context.Arguments.Any()) return;
-        
-        if (context.Description is not CommandDescription description) return ;
-        var sender = await _databaseService.GetUserAsync(description.Message.Username);
-        if (sender is null || !description.Message.IsModerator || sender.Permission > UserPermission.Moderator)
-        {
-            description.Client.SendMention(description.Message.Channel, description.Message.DisplayName,
-                "Требуются права модератора");
-            return;
-        }
-        
-        var userToAdd = context.Arguments.First().ToLower();
-        await _databaseService.AddUser(userToAdd);
-        description.Client.SendMention(description.Message.Channel, description.Message.DisplayName,
-            $"Пользователь {userToAdd} добавлен");
+        await _databaseService.UpdateUser(userToUpdate.Id, userToUpdate);
+        description.Client.SendReply(channel, message.Id,
+            $"Права {context.Arguments.First()} изменены на {permission.ToString()}");
     }
 }

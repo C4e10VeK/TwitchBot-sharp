@@ -3,15 +3,15 @@ using MongoDB.Bson.Serialization.Attributes;
 
 namespace TwitchBot.Models;
 
-public class FeedSmile
+public class Smile
 {
     [BsonId]
     [BsonRepresentation(BsonType.ObjectId)]
     public ObjectId Id { get; set; }
     public string? Name { get; set; }
-    public int FeedCount { get; set; }
-    public float Size { get; set; }
-    public DateTime Timer { get; set; }
     
-    public string? User { get; set; }
+    [BsonRepresentation(BsonType.Double, AllowTruncation = true)]
+    public double Size { get; set; }
+    
+    public List<string> Users { get; set; } = new();
 }

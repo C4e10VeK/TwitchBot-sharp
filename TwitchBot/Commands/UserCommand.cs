@@ -1,4 +1,3 @@
-using TwitchBot.CommandLib;
 using TwitchBot.CommandLib.Attributes;
 using TwitchBot.CommandLib.Models;
 using TwitchBot.Extensions;
@@ -19,7 +18,7 @@ public class UserCommand : CommandModule
     [Command(Name = "help")]
     public Task GetHelp(CommandContext context)
     {
-        if (context.Description is not CommandDescription description) return Task.CompletedTask;
+        if (context.Description is not TwitchCommandDescription description) return Task.CompletedTask;
         
         description.Client.SendMention(description.Message.Channel, description.Message.DisplayName,
             "https://github.com/C4e10VeK/TwitchBot-sharp/blob/master/Help/Help.md");
@@ -29,25 +28,23 @@ public class UserCommand : CommandModule
     [Command(Name = "status")]
     public async Task GetStatus(CommandContext context)
     {
-        if (context.Description is not CommandDescription description) return;
+        if (context.Description is not TwitchCommandDescription description) return;
 
-        var user = await _databaseService.GetUserAsync(description.Message.Username);
-        if (user is null) return;
-
-        if (context.Arguments.Any())
+        var channel = description.Message.Channel;
+        var message = description.Message;
+        
+        var userName = context.Arguments.Any() ? context.Arguments.First().ToLower() : message.Username;
+        var startStr = context.Arguments.Any() ? $"Статус {context.Arguments.First()}" : "Твой статус";
+        
+        var foundUser = await _databaseService.GetUser(userName);
+        
+        if (foundUser is null)
         {
-            user = await _databaseService.GetUserAsync(context.Arguments.First().ToLower());
-            if (user is null)
-            {
-                description.Client.SendMention(description.Message.Channel, description.Message.DisplayName,
-                    "Пользователя нет в базе");
-                return;
-            }
+            description.Client.SendReply(channel, message.Id, "Пользователя нет в базе");
+            return;
         }
 
-        var startStr = context.Arguments.Any() ? $"Статус {user.Name}:" : "Твой статус:";
-
-        description.Client.SendMention(description.Message.Channel, description.Message.DisplayName,
-            $"{startStr} бан - {(user.IsBanned ? "Да" : "нет")}, права - {user.Permission.ToString()}");
+        description.Client.SendReply(channel, message.Id,
+            $"{startStr}: бан {(foundUser.IsBanned ? "есть" : "нет")}, права - {foundUser.Permission.ToString()}");
     }
 }

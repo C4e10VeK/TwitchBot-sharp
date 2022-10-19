@@ -4,21 +4,16 @@ using TwitchBot.CommandLib.Models;
 using TwitchBot.Commands;
 using TwitchBot.Extensions;
 using TwitchBot.Models;
-using TwitchLib.Api;
-using TwitchLib.Api.Core.HttpCallHandlers;
 using TwitchLib.Client;
 using TwitchLib.Client.Events;
 using TwitchLib.Client.Models;
-using TwitchLib.PubSub;
 
 namespace TwitchBot.Services;
 
 public class BotService : BackgroundService
 {
     private readonly TwitchClient _client;
-    private readonly List<TwitchPubSub> _pubSubs;
     private readonly ILogger<BotService> _logger;
-    private readonly FeedDbService _databaseService;
     private readonly CommandContainer _commandContainer;
 
     public BotService(ILogger<BotService> logger, IOptions<BotConfig> options, FeedDbService databaseService)
@@ -27,34 +22,13 @@ public class BotService : BackgroundService
         var credentials = new ConnectionCredentials(config.Name, config.Token);
 
         _client = new TwitchClient();
-        _pubSubs = new List<TwitchPubSub>();
         _client.Initialize(credentials, config.Channels, config.Prefix);
         _logger = logger;
-        _databaseService = databaseService;
-        
+
         _client.OnLog += ClientOnOnLog;
         _client.OnMessageReceived += ClientOnMessageReceived;
         _client.OnChatCommandReceived += ClientOnChatCommandReceived;
 
-        foreach (var channel in config.Channels)
-        {
-            var pubSub = new TwitchPubSub();
-            pubSub.OnStreamUp += (sender, args) => Task.Run(() =>
-            {
-                _client.SendMessage(args.ChannelId, $"{args.ChannelId} запустил поток Pog");
-            });
-            
-            pubSub.OnStreamDown += (sender, args) => Task.Run(() =>
-            {
-                _client.SendMessage(args.ChannelId, "Пока потокер FeelsWeakMan");
-            });
-
-            pubSub.ListenToVideoPlayback(channel);
-            pubSub.Connect();
-            
-            _pubSubs.Add(pubSub);
-        }
-        
         _commandContainer = new CommandContainer()
             .Add<FeedCommand>(databaseService)
             .Add<UserCommand>(databaseService)
@@ -81,9 +55,8 @@ public class BotService : BackgroundService
     {
         var command = e.Command;
         var chatMessage = command.ChatMessage;
-        
-        var foundUser = await _databaseService.GetUserAsync(chatMessage.Username) ??
-                        await _databaseService.AddUser(chatMessage.Username);
+
+        User? foundUser = null;
 
         if (foundUser is {IsBanned: true})
         {
@@ -93,7 +66,7 @@ public class BotService : BackgroundService
 
         var commandContext = new CommandContext
         {
-            Description = new CommandDescription
+            Description = new TwitchCommandDescription
             {
                 Client = _client,
                 Message = chatMessage
