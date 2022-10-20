@@ -7,6 +7,7 @@ using TwitchBot.Models;
 using TwitchLib.Client;
 using TwitchLib.Client.Events;
 using TwitchLib.Client.Models;
+using TwitchLib.Communication.Events;
 
 namespace TwitchBot.Services;
 
@@ -25,20 +26,29 @@ public class BotService : BackgroundService
         _client.Initialize(credentials, config.Channels, config.Prefix);
         _logger = logger;
 
-        _client.OnLog += ClientOnOnLog;
+        _client.OnLog += ClientOnLog;
         _client.OnMessageReceived += ClientOnMessageReceived;
         _client.OnChatCommandReceived += ClientOnChatCommandReceived;
+        _client.OnDisconnected += ClientOnDisconnected;
 
         _commandContainer = new CommandContainer()
             .Add<FeedCommand>(databaseService)
             .Add<UserCommand>(databaseService)
-            .Add<AdminCommand>(databaseService);
+            .Add<AdminCommand>(databaseService)
+            .Add<AnimeCommand>(databaseService);
     }
 
-    private void ClientOnOnLog(object? sender, OnLogArgs e)
+    private void ClientOnDisconnected(object? sender, OnDisconnectedEventArgs e)
     {
-        // if (e.Data is null) return; 
-        // _logger.LogInformation("{Message}", e.Data);
+        _client.Reconnect();
+    }
+
+    private void ClientOnLog(object? sender, OnLogArgs e)
+    {
+        // if (e.Data is null) return;
+        // using var sw = File.AppendText("log.txt");
+        // sw.WriteLine("{0:HH:mm:ss}: {1}", e.DateTime, e.Data);
+        // sw.Close();
     }
 
     private Task OnMessageReceived(object? sender, OnMessageReceivedArgs e)

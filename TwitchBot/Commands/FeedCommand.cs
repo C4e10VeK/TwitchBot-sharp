@@ -30,6 +30,7 @@ public class FeedCommand : CommandModule
 
         var smiles = (await _feedDbService.GetSmiles())
             .Where(s => s.Size > 0)
+            .OrderByDescending(s => s.Size)
             .ToList();
 
         var top = "Топ смайлов peepoFAT : ";
@@ -123,7 +124,7 @@ public class FeedCommand : CommandModule
         var smiles = (await _feedDbService.GetSmiles(foundUser.Name)).Select(s => s.Name).ToList();
 
         description.Client.SendReply(channel, message.Id,
-            $"{startStr} {foundUser.FeedCount} раз(а), покормленные тобой смайлы - {string.Join(" , ", smiles)}");
+            $"{startStr} {foundUser.FeedCount} раз(а), покормленные смайлы - {string.Join(" , ", smiles)}");
 
     }
 
