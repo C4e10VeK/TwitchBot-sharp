@@ -1,3 +1,4 @@
+using System.Reflection;
 using TwitchBot.CommandLib.Models;
 
 namespace TwitchBot.CommandLib;

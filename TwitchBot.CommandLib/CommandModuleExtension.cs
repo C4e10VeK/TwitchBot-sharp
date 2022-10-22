@@ -14,7 +14,7 @@ internal static class CommandModuleExtension
         var defaultMethod = module.GetType().GetMethod(nameof(module.Execute));
         return new Command
         {
-            Name = groupAttrib.Name,
+            Name = groupAttrib.Name ?? throw new ArgumentNullException(),
             Module = module,
             CommandMethod = defaultMethod
         };
@@ -29,7 +29,7 @@ internal static class CommandModuleExtension
                 var commandAttrib = m.GetCustomAttribute<CommandAttribute>();
                 return new Command
                 {
-                    Name = commandAttrib?.Name,
+                    Name = commandAttrib?.Name ?? throw new ArgumentNullException(),
                     Module = module,
                     CommandMethod = m,
                     Parent = commandGroup

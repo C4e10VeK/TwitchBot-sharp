@@ -5,12 +5,12 @@ using TwitchBot.Services;
 
 namespace TwitchBot.Commands;
 
-[Group(Name = "anime")]
-public class AnimeCommand : CommandModule
+[Group(Name = "auto")]
+public class AutoCommand : CommandModule
 {
     private readonly FeedDbService _feedDbService;
     
-    public AnimeCommand(FeedDbService feedDbService)
+    public AutoCommand(FeedDbService feedDbService)
     {
         _feedDbService = feedDbService;
     }
@@ -32,7 +32,7 @@ public class AnimeCommand : CommandModule
         }
 
         var str = context.Arguments.Any() ? $"{userName}" : "Ты";
-        var isAnimeStr = foundUser.IsAnime ? "анимешник D:" : "не анимешник"; 
+        var isAnimeStr = foundUser.IsAnime ? "авточел D:" : "не авточел"; 
         description.Client.SendReply(channel, message.Id, $"{str} - {isAnimeStr}");
     }
 
@@ -45,8 +45,8 @@ public class AnimeCommand : CommandModule
         var message = description.Message;
         
         var animes = (await _feedDbService.GetUsersAsync())
-            .Where(u => u.IsAnime)
-            .Aggregate("Список анимешников: ", (s, u) => s + u.Name + "; ");
+            .Where(u => u.IsAuto)
+            .Aggregate("Список авточелов: ", (s, u) => s + u.Name + "; ");
 
         description.Client.SendReply(channel, message.Id, animes);
     }
@@ -66,15 +66,15 @@ public class AnimeCommand : CommandModule
         
         if (foundUser is null) return;
 
-        if (foundUser.IsAnime)
+        if (foundUser.IsAuto)
         {
-            description.Client.SendReply(channel, message.Id, "Пользователь уже анимешник");
+            description.Client.SendReply(channel, message.Id, "Пользователь уже авточел");
             return;
         }
-        foundUser.IsAnime = true;
+        foundUser.IsAuto = true;
 
         await _feedDbService.UpdateUser(foundUser.Id, foundUser);
-        description.Client.SendReply(channel, message.Id, $"{userName} стал анимешником D:");
+        description.Client.SendReply(channel, message.Id, $"{userName} стал авточелом D:");
     }
     
     [Command(Name = "remove")]
@@ -92,14 +92,14 @@ public class AnimeCommand : CommandModule
         
         if (foundUser is null) return;
 
-        if (!foundUser.IsAnime)
+        if (!foundUser.IsAuto)
         {
-            description.Client.SendReply(channel, message.Id, "Пользователь не анимешник");
+            description.Client.SendReply(channel, message.Id, "Пользователь не авточел");
             return;
         }
-        foundUser.IsAnime = false;
+        foundUser.IsAuto = false;
 
         await _feedDbService.UpdateUser(foundUser.Id, foundUser);
-        description.Client.SendReply(channel, message.Id, $"{userName} больше не анимешник lizardPls");
+        description.Client.SendReply(channel, message.Id, $"{userName} больше не авточел lizardPls");
     }
 }

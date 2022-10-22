@@ -31,6 +31,7 @@ public class FeedCommand : CommandModule
         var smiles = (await _feedDbService.GetSmiles())
             .Where(s => s.Size > 0)
             .OrderByDescending(s => s.Size)
+            .Take(Range.EndAt(4))
             .ToList();
 
         var top = "Топ смайлов peepoFAT : ";
@@ -166,6 +167,16 @@ public class FeedCommand : CommandModule
         if (context.Description is not TwitchCommandDescription description) return;
 
         if (!context.Arguments.Any() || context.Arguments.Count < 2) return;
+        var channel = description.Message.Channel;
+        var message = description.Message;
+        
+        var callerUser = await _feedDbService.GetUser(description.Message.Username);
+
+        if (callerUser is null || callerUser.Permission > UserPermission.Owner)
+        {
+            description.Client.SendReply(channel, message.Id, "Требуются права владельца!!!");
+            return;
+        }
 
         if (context.Arguments.First() == "reset")
         {

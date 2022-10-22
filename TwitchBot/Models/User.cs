@@ -9,12 +9,23 @@ public class User
     [BsonRepresentation(BsonType.ObjectId)]
     public ObjectId Id { get; set; }
     public string? Name { get; set; }
+    
+    [BsonDefaultValue(UserPermission.User)]
     public UserPermission Permission { get; set; }
-    public bool IsBanned { get; set; } = false;
+    
+    [BsonDefaultValue(false)]
+    public bool IsBanned { get; set; }
+    
+    [BsonDefaultValue(false)]
+    public bool IsAnime { get; set; }
+    
+    [BsonDefaultValue(false)]
+    public bool IsAuto { get; set; }
     
     public DateTime TimeToFeed { get; set; } = DateTime.UtcNow;
 
-    public int FeedCount { get; set; } = 0;
+    [BsonDefaultValue(0)]
+    public int FeedCount { get; set; }
 
     public Dictionary<string, ObjectId> FeedSmiles { get; set; } = new();
 }

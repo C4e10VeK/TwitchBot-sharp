@@ -10,7 +10,6 @@ public class FeedDbService
     private readonly MongoClient _client;
     private readonly IMongoCollection<User> _users;
     private readonly IMongoCollection<Smile> _smiles;
-    private readonly IMongoCollection<Anime> _animes;
 
     public FeedDbService(IOptions<FeedDBConfig> options)
     {
@@ -20,7 +19,6 @@ public class FeedDbService
 
         _users = db.GetCollection<User>("Users");
         _smiles = db.GetCollection<Smile>(config.Table);
-        _animes = db.GetCollection<Anime>("Animes");
     }
 
     public async Task<List<User>> GetUsersAsync() => await _users.Find(_ => true).ToListAsync();
@@ -32,8 +30,6 @@ public class FeedDbService
     {
         return await _smiles.Find(s => s.Users.Contains(user)).ToListAsync();
     }
-
-    public async Task<List<Anime>> GetAnimes() => await _animes.Find(_ => true).ToListAsync();
 
     public async Task<List<string?>> GetAvailableSmiles()
     {
@@ -64,12 +60,6 @@ public class FeedDbService
         var cursor = await _smiles.FindAsync(s => s.Name == name);
         return await _smiles.CountDocumentsAsync(s => s.Name == name) > 0 ? await cursor.SingleAsync() : null;
     }
-    
-    public async Task<Anime?> GetAnime(string name)
-    {
-        var cursor = await _animes.FindAsync(s => s.User == name);
-        return await _animes.CountDocumentsAsync(s => s.User == name) > 0 ? await cursor.SingleAsync() : null;
-    }
 
     public async Task AddUser(User? user)
     {
@@ -81,12 +71,6 @@ public class FeedDbService
     {
         if (smile is null) return;
         await _smiles.InsertOneAsync(smile);
-    }
-    
-    public async Task AddSmile(Anime? anime)
-    {
-        if (anime is null) return;
-        await _animes.InsertOneAsync(anime);
     }
 
     public async Task UpdateUser(ObjectId id, User? user)
@@ -101,14 +85,7 @@ public class FeedDbService
         await _smiles.ReplaceOneAsync(s => s.Id == id, smile);
         return await GetSmile(id);
     }
-    
-    public async Task<Anime?> UpdateAnime(ObjectId id, Anime? anime)
-    {
-        if (anime is null) return null;
-        await _animes.ReplaceOneAsync(s => s.Id == id, anime);
-        return await GetAnime(anime.User);
-    }
-    
+
     public async Task<User?> AddUser(string name)
     {
         var user = new User
@@ -133,17 +110,5 @@ public class FeedDbService
 
         await AddSmile(smile);
         return await GetSmile(name);
-    }
-    
-    public async Task<Anime?> AddAnime(string name)
-    {
-        var anime = new Anime
-        {
-            User = name,
-            Count = 0
-        };
-
-        await _animes.InsertOneAsync(anime);
-        return await GetAnime(name);
     }
 }

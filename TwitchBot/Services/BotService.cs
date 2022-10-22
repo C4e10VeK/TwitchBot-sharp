@@ -7,7 +7,6 @@ using TwitchBot.Models;
 using TwitchLib.Client;
 using TwitchLib.Client.Events;
 using TwitchLib.Client.Models;
-using TwitchLib.Communication.Events;
 
 namespace TwitchBot.Services;
 
@@ -16,31 +15,40 @@ public class BotService : BackgroundService
     private readonly TwitchClient _client;
     private readonly ILogger<BotService> _logger;
     private readonly CommandContainer _commandContainer;
+    private readonly Thread _autoPong;
+    private static readonly TimeSpan AutoPongInterval = TimeSpan.FromMinutes(4);
 
     public BotService(ILogger<BotService> logger, IOptions<BotConfig> options, FeedDbService databaseService)
     {
         var config = options.Value;
         var credentials = new ConnectionCredentials(config.Name, config.Token);
 
-        _client = new TwitchClient();
+        _client = new TwitchClient
+        {
+            DisableAutoPong = true
+        };
         _client.Initialize(credentials, config.Channels, config.Prefix);
         _logger = logger;
 
         _client.OnLog += ClientOnLog;
         _client.OnMessageReceived += ClientOnMessageReceived;
         _client.OnChatCommandReceived += ClientOnChatCommandReceived;
-        _client.OnDisconnected += ClientOnDisconnected;
+
+        _autoPong = new Thread(() =>
+        {
+            while (_client.IsConnected)
+            {
+                _client.SendRaw("PONG :tmi.twitch.tv");
+                Thread.Sleep(AutoPongInterval);
+            }
+        });
 
         _commandContainer = new CommandContainer()
             .Add<FeedCommand>(databaseService)
             .Add<UserCommand>(databaseService)
             .Add<AdminCommand>(databaseService)
-            .Add<AnimeCommand>(databaseService);
-    }
-
-    private void ClientOnDisconnected(object? sender, OnDisconnectedEventArgs e)
-    {
-        _client.Reconnect();
+            .Add<AnimeCommand>(databaseService)
+            .Add<AutoCommand>(databaseService);
     }
 
     private void ClientOnLog(object? sender, OnLogArgs e)
@@ -102,6 +110,13 @@ public class BotService : BackgroundService
     protected override async Task ExecuteAsync(CancellationToken stoppingToken)
     {
         _client.Connect();
+        _autoPong.Start();
         await Task.Delay(500, stoppingToken);
+    }
+
+    public override void Dispose()
+    {
+        _autoPong.Join(TimeSpan.FromSeconds(5));
+        base.Dispose();
     }
 }
