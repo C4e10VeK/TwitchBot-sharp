@@ -1,7 +1,5 @@
-using TwitchBot.CommandLib;
 using TwitchBot.CommandLib.Attributes;
 using TwitchBot.CommandLib.Models;
-using TwitchBot.Extensions;
 using TwitchBot.Models;
 using TwitchBot.Services;
 
