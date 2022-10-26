@@ -51,11 +51,15 @@ public class BotService : BackgroundService
         };
 
         _pubSub = new TwitchPubSub();
+        
+        foreach (var configChannel in config.Channels)
+        {
+            _pubSub.ListenToPredictions(configChannel.GetChannelId(_api));
+        }
 
         _pubSub.OnPrediction += OnPubSubPrediction; 
         _pubSub.OnPubSubServiceConnected += (_, _) =>
         {
-            _pubSub.ListenToPredictions(config.Channels.First().GetChannelId(_api));
             _pubSub.SendTopics(config.Token);
         };
         _pubSub.OnPubSubServiceError += (_, args) =>
