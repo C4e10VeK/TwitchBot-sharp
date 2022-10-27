@@ -16,6 +16,7 @@
     </ItemGroup>
 
     <ItemGroup>
+      <ProjectReference Include="..\TwitchBot.BlabLib\TwitchBot.BlabLib.csproj" />
       <ProjectReference Include="..\TwitchBot.CommandLib\TwitchBot.CommandLib.csproj" />
     </ItemGroup>
 </Project>

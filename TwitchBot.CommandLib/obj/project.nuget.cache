@@ -1,10 +1,8 @@
 {
   "version": 2,
-  "dgSpecHash": "QxqQ5lxZH7n9kgGrKr8faaSkhg1CHQ67lbQuQ4QuRdNCwCahkdQcClhlcuL7s9fofH2MOb0jcQs09YPjoVFTPA==",
+  "dgSpecHash": "mwwfqLXRjrSRfg0xdg9BeOK33ib10jGD0OIS95OqBZSisjB6BwUBIutSziRJ36TkrWIJ5dKvsVN1swV7uKJWyQ==",
   "success": true,
-  "projectFilePath": "/home/archweeb/RiderProjects/TwitchBot/TwitchBot.CommandLib/TwitchBot.CommandLib.csproj",
-  "expectedPackageFiles": [
-    "/home/archweeb/.nuget/packages/microsoft.aspnetcore.app.ref/6.0.10/microsoft.aspnetcore.app.ref.6.0.10.nupkg.sha512"
-  ],
+  "projectFilePath": "D:\\Users\\martynenkogv\\RiderProjects\\TwitchBot-sharp\\TwitchBot.CommandLib\\TwitchBot.CommandLib.csproj",
+  "expectedPackageFiles": [],
   "logs": []
 }

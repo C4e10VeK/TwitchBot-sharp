@@ -1,25 +1,27 @@
 {
   "format": 1,
   "restore": {
-    "/home/archweeb/RiderProjects/TwitchBot/TwitchBot.CommandLib/TwitchBot.CommandLib.csproj": {}
+    "D:\\Users\\martynenkogv\\RiderProjects\\TwitchBot-sharp\\TwitchBot.CommandLib\\TwitchBot.CommandLib.csproj": {}
   },
   "projects": {
-    "/home/archweeb/RiderProjects/TwitchBot/TwitchBot.CommandLib/TwitchBot.CommandLib.csproj": {
+    "D:\\Users\\martynenkogv\\RiderProjects\\TwitchBot-sharp\\TwitchBot.CommandLib\\TwitchBot.CommandLib.csproj": {
       "version": "1.0.0",
       "restore": {
-        "projectUniqueName": "/home/archweeb/RiderProjects/TwitchBot/TwitchBot.CommandLib/TwitchBot.CommandLib.csproj",
+        "projectUniqueName": "D:\\Users\\martynenkogv\\RiderProjects\\TwitchBot-sharp\\TwitchBot.CommandLib\\TwitchBot.CommandLib.csproj",
         "projectName": "TwitchBot.CommandLib",
-        "projectPath": "/home/archweeb/RiderProjects/TwitchBot/TwitchBot.CommandLib/TwitchBot.CommandLib.csproj",
-        "packagesPath": "/home/archweeb/.nuget/packages/",
-        "outputPath": "/home/archweeb/RiderProjects/TwitchBot/TwitchBot.CommandLib/obj/",
+        "projectPath": "D:\\Users\\martynenkogv\\RiderProjects\\TwitchBot-sharp\\TwitchBot.CommandLib\\TwitchBot.CommandLib.csproj",
+        "packagesPath": "D:\\Users\\martynenkogv\\.nuget\\packages\\",
+        "outputPath": "D:\\Users\\martynenkogv\\RiderProjects\\TwitchBot-sharp\\TwitchBot.CommandLib\\obj\\",
         "projectStyle": "PackageReference",
         "configFilePaths": [
-          "/home/archweeb/.nuget/NuGet/NuGet.Config"
+          "D:\\Users\\martynenkogv\\AppData\\Roaming\\NuGet\\NuGet.Config",
+          "C:\\Program Files (x86)\\NuGet\\Config\\Microsoft.VisualStudio.Offline.config"
         ],
         "originalTargetFrameworks": [
           "net6.0"
         ],
         "sources": {
+          "C:\\Program Files (x86)\\Microsoft SDKs\\NuGetPackages\\": {},
           "https://api.nuget.org/v3/index.json": {}
         },
         "frameworks": {
@@ -47,18 +49,12 @@
           ],
           "assetTargetFallback": true,
           "warn": true,
-          "downloadDependencies": [
-            {
-              "name": "Microsoft.AspNetCore.App.Ref",
-              "version": "[6.0.10, 6.0.10]"
-            }
-          ],
           "frameworkReferences": {
             "Microsoft.NETCore.App": {
               "privateAssets": "all"
             }
           },
-          "runtimeIdentifierGraphPath": "/usr/share/dotnet/sdk/6.0.110/RuntimeIdentifierGraph.json"
+          "runtimeIdentifierGraphPath": "C:\\Program Files\\dotnet\\sdk\\6.0.100\\RuntimeIdentifierGraph.json"
         }
       }
     }

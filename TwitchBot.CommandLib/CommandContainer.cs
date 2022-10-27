@@ -1,4 +1,3 @@
-using System.Reflection;
 using TwitchBot.CommandLib.Models;
 
 namespace TwitchBot.CommandLib;
@@ -56,7 +55,7 @@ public class CommandContainer
         var cmd = _commands.First(c => c.Name == command);
         if ((cmd.Children ?? Array.Empty<Command>()).Any())
         {
-            var subCommand = context.Arguments.Any() ? context.Arguments.First() : "";
+            var subCommand = context.Arguments.Any() ? context.Arguments[0] : "";
 
             if (!cmd.Children?.Any(c => c.Name == subCommand) ?? true)
             {

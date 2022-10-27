@@ -1,4 +1,6 @@
 using Microsoft.Extensions.Options;
+using TwitchBot.BlabLib;
+using TwitchBot.BlabLib.Models;
 using TwitchBot.CommandLib;
 using TwitchBot.CommandLib.Models;
 using TwitchBot.Commands;
@@ -55,16 +57,21 @@ public class BotService : BackgroundService
         foreach (var configChannel in config.Channels)
         {
             _pubSub.ListenToPredictions(configChannel.GetChannelId(_api));
+            _pubSub.ListenToChannelPoints(configChannel.GetChannelId(_api));
         }
 
-        _pubSub.OnPrediction += OnPubSubPrediction; 
-        _pubSub.OnPubSubServiceConnected += (_, _) =>
+        _pubSub.OnPubSubServiceConnected += (_, _) => _pubSub.SendTopics(config.Token);
+        _pubSub.OnPubSubServiceError += (_, args) => _logger.LogError("{Message}", args.Exception.Message);
+        _pubSub.OnPrediction += OnPubSubPrediction;
+        _pubSub.OnChannelPointsRewardRedeemed += async (_, args) =>
         {
-            _pubSub.SendTopics(config.Token);
-        };
-        _pubSub.OnPubSubServiceError += (_, args) =>
-        {
-            _logger.LogError("{Message}", args.Exception.Message);
+            var redeem = args.RewardRedeemed.Redemption;
+            if (!redeem.Reward.Title.ToLower().StartsWith("дать совет")) return;
+            var text = await Blab.GenerateAsync(BlabType.Wisdom, $"{redeem.User.DisplayName} вот тебе совет:");
+            _client.SendMessage(args.ChannelId.GetChannelName(_api), "Не могу дать совет");
+            
+            _client.SendMention(args.ChannelId.GetChannelName(_api), redeem.User.DisplayName,
+                text.ToString());
         };
         
         _autoPong = new Thread(() =>
