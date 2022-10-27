@@ -16,6 +16,7 @@ public class TipCommand : CommandModule
         var channel = description.Message.Channel;
         var message = description.Message;
 
+        description.Client.SendReply(channel, message.Id, "Генерирую совет coMMMMfy");
         var result = await Blab.GenerateAsync(BlabType.Wisdom, $"{description.Message.DisplayName} вот тебе совет:");
         
         description.Client.SendReply(channel, message.Id, result.ToString());

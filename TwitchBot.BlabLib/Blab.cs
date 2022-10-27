@@ -8,7 +8,7 @@ namespace TwitchBot.BlabLib;
 
 public class Blab
 {
-    private async Task<BlabText> Get(BlabType type, string query)
+    private static async Task<BlabText> Get(BlabType type, string query)
     {
         using HttpClient client = new();
         var blabRequest = new BlabRequest
@@ -43,7 +43,7 @@ public class Blab
         };
     }
 
-    public async Task<BlabText> GetWhenGenerated(BlabType type, string query)
+    private static async Task<BlabText> GetWhenGenerated(BlabType type, string query)
     {
         IAsyncPolicy<BlabText> retryPolicy = Policy<BlabText>
             .Handle<BlabNotGeneratedException>()
@@ -54,18 +54,8 @@ public class Blab
         return result;
     }
 
-    public static async Task<BlabText> GenerateAsync(BlabType type, string query)
-    {
-        var blab = new Blab();
+    public static async Task<BlabText> GenerateAsync(BlabType type, string query) =>
+        await GetWhenGenerated(type, query);
 
-        return await blab.GetWhenGenerated(type, query);
-    }
-    
-    public static BlabText Generate(BlabType type, string query)
-    {
-        var blab = new Blab();
-
-        return blab.GetWhenGenerated(type, query).Result;
-    }
-
+    public static BlabText Generate(BlabType type, string query) => GetWhenGenerated(type, query).Result;
 }
