@@ -1,4 +1,6 @@
 using Microsoft.Extensions.Options;
+using TwitchBot.BlabLib;
+using TwitchBot.BlabLib.Models;
 using TwitchBot.CommandLib;
 using TwitchBot.CommandLib.Models;
 using TwitchBot.Commands;
@@ -57,15 +59,9 @@ public class BotService : BackgroundService
             _pubSub.ListenToPredictions(configChannel.GetChannelId(_api));
         }
 
-        _pubSub.OnPrediction += OnPubSubPrediction; 
-        _pubSub.OnPubSubServiceConnected += (_, _) =>
-        {
-            _pubSub.SendTopics(config.Token);
-        };
-        _pubSub.OnPubSubServiceError += (_, args) =>
-        {
-            _logger.LogError("{Message}", args.Exception.Message);
-        };
+        _pubSub.OnPubSubServiceConnected += (_, _) => _pubSub.SendTopics(config.Token);
+        _pubSub.OnPubSubServiceError += (_, args) => _logger.LogError("{Message}", args.Exception.Message);
+        _pubSub.OnPrediction += OnPubSubPrediction;
         
         _autoPong = new Thread(() =>
         {
