@@ -13,6 +13,9 @@ using TwitchLib.Client.Models;
 using TwitchLib.PubSub;
 using TwitchLib.PubSub.Enums;
 using TwitchLib.PubSub.Events;
+using WebhookDiscord;
+using WebhookDiscord.Models;
+using WebhookDiscord.Models.Embed;
 using OnLogArgs = TwitchLib.Client.Events.OnLogArgs;
 
 namespace TwitchBot.Services;
@@ -26,6 +29,7 @@ public class BotService : BackgroundService
     private readonly CommandContainer _commandContainer;
     private readonly Thread _autoPong;
     private static readonly TimeSpan AutoPongInterval = TimeSpan.FromMinutes(4);
+    private readonly DiscordWebHook _discordWebHook;
 
     public BotService(ILogger<BotService> logger, IOptions<BotConfig> options, FeedDbService databaseService)
     {
@@ -54,14 +58,48 @@ public class BotService : BackgroundService
 
         _pubSub = new TwitchPubSub();
         
+        _discordWebHook = new DiscordWebHook(config.WebHookAnonc, "Twitch Announcement");
+        
         foreach (var configChannel in config.Channels)
         {
             _pubSub.ListenToPredictions(configChannel.GetChannelId(_api));
+            _pubSub.ListenToVideoPlayback(configChannel.GetChannelId(_api));
         }
 
         _pubSub.OnPubSubServiceConnected += (_, _) => _pubSub.SendTopics(config.Token);
         _pubSub.OnPubSubServiceError += (_, args) => _logger.LogError("{Message}", args.Exception.Message);
         _pubSub.OnPrediction += OnPubSubPrediction;
+        _pubSub.OnStreamUp += (_, _) => Task.Run(async () =>
+        {
+            var color = new Color
+            {
+                R = 100,
+                G = 65,
+                B = 165
+            };
+
+            var embed = new Embed
+            {
+                Title = "Screamlark запустил поток",
+                Description = "Скорее все залетайте",
+                Color = color,
+                Thumbnail = new EmbedMedia
+                {
+                    Url = "https://static-cdn.jtvnw.net/jtv_user_pictures/aa7aaab0-d593-457b-9ea1-3a1997fe5332-profile_image-70x70.png"
+                },
+                Url = "https://www.twitch.tv/screamlark",
+                Footer = new EmbedFooter
+                {
+                    Text = _discordWebHook.Name
+                },
+                TimeStamp = DateTime.UtcNow
+            };
+            
+            await _discordWebHook.Send("@everyone",
+                color,
+                "https://cdn-icons-png.flaticon.com/512/5968/5968819.png", 
+                new List<Embed> {embed});
+        });
         
         _autoPong = new Thread(() =>
         {

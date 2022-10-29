@@ -51,6 +51,13 @@ public class Blab
 
         var result = await retryPolicy.ExecuteAsync(async () => await Get(type, query));
 
+        if (result is null)
+            return new BlabText
+            {
+                Qyery = query,
+                Text = "А нет совета"
+            };
+        
         return result;
     }
 

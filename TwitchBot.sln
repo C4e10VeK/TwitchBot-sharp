@@ -7,6 +7,8 @@ Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "TwitchBot.CommandLib", "Twi
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "TwitchBot.BlabLib", "TwitchBot.BlabLib\TwitchBot.BlabLib.csproj", "{E9BB47D2-DA13-4B91-B061-732924A66367}"
 EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "WebhookDiscord", "WebhookDiscord\WebhookDiscord.csproj", "{81F9E1E8-E08B-45E7-B095-F3DD5A61FC52}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU
