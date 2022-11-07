@@ -5,10 +5,10 @@ var host = Host.CreateDefaultBuilder(args)
     .UseSystemd()
     .ConfigureServices((builder, services) =>
     {
-        services.Configure<BotConfig>(builder.Configuration.GetSection("BotConfig"));
-        services.Configure<FeedDBConfig>(builder.Configuration.GetSection("FeedDBConfig"));
-        services.AddSingleton<FeedDbService>();
-        services.AddHostedService<BotService>();
+        services.Configure<BotConfig>(builder.Configuration.GetSection("BotConfig"))
+            .Configure<WebApiConfig>(builder.Configuration.GetSection("WebApi"));
+        services.AddSingleton<IWebApiService, WebApiService>()
+            .AddHostedService<BotService>();
     })
     .Build();
 

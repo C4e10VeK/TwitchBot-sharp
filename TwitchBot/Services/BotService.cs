@@ -1,11 +1,8 @@
 using Microsoft.Extensions.Options;
-using TwitchBot.BlabLib;
-using TwitchBot.BlabLib.Models;
-using TwitchBot.CommandLib;
-using TwitchBot.CommandLib.Models;
-using TwitchBot.Commands;
 using TwitchBot.Extensions;
 using TwitchBot.Models;
+using TwitchBot.Models.Request;
+using TwitchBot.Models.Response;
 using TwitchLib.Api;
 using TwitchLib.Client;
 using TwitchLib.Client.Events;
@@ -26,12 +23,14 @@ public class BotService : BackgroundService
     private readonly TwitchPubSub _pubSub;
     private readonly TwitchAPI _api;
     private readonly ILogger<BotService> _logger;
-    private readonly CommandContainer _commandContainer;
     private readonly Thread _autoPong;
     private static readonly TimeSpan AutoPongInterval = TimeSpan.FromMinutes(4);
     private readonly DiscordWebHook _discordWebHook;
+    private IWebApiService _webApiService;
+    private DateTime _anonncDelay = DateTime.Now;
+    private bool _isActivatedPrediction = false;
 
-    public BotService(ILogger<BotService> logger, IOptions<BotConfig> options, FeedDbService databaseService)
+    public BotService(ILogger<BotService> logger, IOptions<BotConfig> options, IWebApiService webApiService)
     {
         var config = options.Value;
         var credentials = new ConnectionCredentials(config.Name, config.Token);
@@ -42,6 +41,7 @@ public class BotService : BackgroundService
         };
         _client.Initialize(credentials, config.Channels, config.Prefix);
         _logger = logger;
+        _webApiService = webApiService;
 
         _client.OnLog += ClientOnLog;
         _client.OnMessageReceived += ClientOnMessageReceived;
@@ -68,38 +68,8 @@ public class BotService : BackgroundService
 
         _pubSub.OnPubSubServiceConnected += (_, _) => _pubSub.SendTopics(config.Token);
         _pubSub.OnPubSubServiceError += (_, args) => _logger.LogError("{Message}", args.Exception.Message);
-        _pubSub.OnPrediction += OnPubSubPrediction;
-        _pubSub.OnStreamUp += (_, _) => Task.Run(async () =>
-        {
-            var color = new Color
-            {
-                R = 100,
-                G = 65,
-                B = 165
-            };
-
-            var embed = new Embed
-            {
-                Title = "Screamlark запустил поток",
-                Description = "Скорее все залетайте",
-                Color = color,
-                Thumbnail = new EmbedMedia
-                {
-                    Url = "https://static-cdn.jtvnw.net/jtv_user_pictures/aa7aaab0-d593-457b-9ea1-3a1997fe5332-profile_image-70x70.png"
-                },
-                Url = "https://www.twitch.tv/screamlark",
-                Footer = new EmbedFooter
-                {
-                    Text = _discordWebHook.Name
-                },
-                TimeStamp = DateTime.UtcNow
-            };
-            
-            await _discordWebHook.Send("@everyone",
-                color,
-                "https://cdn-icons-png.flaticon.com/512/5968/5968819.png", 
-                new List<Embed> {embed});
-        });
+        // _pubSub.OnPrediction += OnPubSubPrediction;
+        _pubSub.OnStreamUp += (_, _) => Task.Run(OnStreamUp);
         
         _autoPong = new Thread(() =>
         {
@@ -109,14 +79,27 @@ public class BotService : BackgroundService
                 Thread.Sleep(AutoPongInterval);
             }
         });
+    }
 
-        _commandContainer = new CommandContainer()
-            .Add<FeedCommand>(databaseService)
-            .Add<UserCommand>(databaseService)
-            .Add<AdminCommand>(databaseService)
-            .Add<AnimeCommand>(databaseService)
-            .Add<AutoCommand>(databaseService)
-            .Add<TipCommand>();
+    private async Task OnStreamUp()
+    {
+        if (_anonncDelay > DateTime.Now) return;
+        var color = new Color {R = 100, G = 65, B = 165};
+
+        var embed = new Embed
+        {
+            Title = "Screamlark запустил поток",
+            Description = "Скорее все залетайте",
+            Color = color,
+            Thumbnail = new EmbedMedia {Url = "https://static-cdn.jtvnw.net/jtv_user_pictures/aa7aaab0-d593-457b-9ea1-3a1997fe5332-profile_image-70x70.png"},
+            Url = "https://www.twitch.tv/screamlark",
+            Footer = new EmbedFooter {Text = _discordWebHook.Name},
+            TimeStamp = DateTime.UtcNow
+        };
+
+        await _discordWebHook.Send("@everyone", color, "https://cdn-icons-png.flaticon.com/512/5968/5968819.png",
+            new List<Embed> {embed});
+        _anonncDelay = DateTime.Now.AddMinutes(5);
     }
 
     public override void Dispose()
@@ -156,25 +139,16 @@ public class BotService : BackgroundService
         var command = e.Command;
         var chatMessage = command.ChatMessage;
 
-        User? foundUser = null;
-
-        if (foundUser is {IsBanned: true})
-        {
-            _client.SendMention(chatMessage.Channel, chatMessage.DisplayName, "Ты забанен(а), кормить нельзя!!!");
-            return;
-        }
-
-        var commandContext = new CommandContext
-        {
-            Description = new TwitchCommandDescription
+        var result = await _webApiService.CallApi<ResponseText, CommandRequest>("/RunCommand", HttpMethod.Post, 
+            new CommandRequest
             {
-                Client = _client,
-                Message = chatMessage
-            },
-            Arguments = command.ArgumentsAsList
-        };
+                Text = $"{command.CommandText} {command.ArgumentsAsString}",
+                Username = chatMessage.Username
+            });
 
-        await _commandContainer.Execute(command.CommandText, commandContext);
+        if (result is null)
+            return;
+        _client.SendReply(chatMessage.Channel, chatMessage.Id, result.Text);
     }
     
     private void ClientOnChatCommandReceived(object? sender, OnChatCommandReceivedArgs e)
@@ -196,7 +170,9 @@ public class BotService : BackgroundService
         {
             case PredictionStatus.Active:
             {
+                if (_isActivatedPrediction) return;
                 _client.SendMention(channel, channel.Channel, "запустили прогноз OOOO");
+                _isActivatedPrediction = true;
                 return;
             }
             case PredictionStatus.Locked:
@@ -212,10 +188,12 @@ public class BotService : BackgroundService
                     ? $"Топ поинтер: {topPredictors.First().DisplayName}, кол-во {topPredictors.First().Points}"
                     : "";
                 _client.SendMessage(channel, $"Победил вариант: {winingOutcome.Title}. {topPointerStr}");
+                _isActivatedPrediction = false;
                 return;
             }
             case PredictionStatus.Canceled:
                 _client.SendMention(channel, channel.Channel, "прогноз отменен MMMM");
+                _isActivatedPrediction = false;
                 return;
             default:
                 return;
